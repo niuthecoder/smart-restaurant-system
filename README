@@ -1,0 +1,152 @@
+🍽️ Restaurant Management System
+A comprehensive Spring Boot backend application for managing restaurant operations including orders, reservations, menu items, payments, and inventory.
+
+🚀 Features
+🔐 Authentication & Authorization - JWT-based security with role-based access
+
+📊 Admin Dashboard - Real-time analytics and statistics
+
+🪑 Table Management - Manage restaurant tables and occupancy
+
+📋 Order System - Complete order lifecycle management
+
+🍽️ Menu Management - CRUD operations for menu items
+
+📅 Reservation System - Table booking and management
+
+💳 Payment Processing - Payment tracking and completion
+
+📦 Inventory Management - Stock level monitoring
+
+👥 User Management - Customer and staff accounts
+
+🛠️ Technology Stack
+Backend: Spring Boot 3.5.5
+
+Security: Spring Security + JWT
+
+Database: PostgreSQL
+
+Authentication: JWT Tokens
+
+Build Tool: Maven
+
+Java Version: 17
+
+📋 Prerequisites
+Java 17 or higher
+
+Maven 3.6+
+
+PostgreSQL 12+
+
+Git
+
+⚡ Quick Start
+
+1. Clone the Repository
+
+git clone <your-repository-url>
+
+cd restaurant-backend
+
+2. Configure Database
+
+CREATE DATABASE restaurant_db;
+
+3. Configure Application
+
+spring.datasource.url=jdbc:postgresql://localhost:5432/restaurant_db
+spring.datasource.username=your_username
+spring.datasource.password=your_password
+
+# JWT Secret
+jwt.secret=your-secret-key-here
+
+# Server Port
+server.port=8080
+
+4. Run the Application
+
+mvn spring-boot:run
+
+5. Access the Application
+API Base URL: http://localhost:8080
+
+Default Admin Login:
+
+Username: admin
+
+Password: admin123
+
+Project Structure
+
+src/
+├── main/
+│   ├── java/
+│   │   └── com/example/restaurant/backend/
+│   │       ├── config/          # Security & JWT configuration
+│   │       ├── controller/      # REST controllers
+│   │       ├── entity/          # JPA entities
+│   │       ├── repository/      # Data repositories
+│   │       ├── dto/            # Data transfer objects
+│   │       └── BackendApplication.java
+│   └── resources/
+│       └── application.properties
+
+
+API Documentation : you can found the api doc in the api-documentation.md
+
+
+👤 Default Users
+The system automatically creates a default admin user:
+
+Username: admin
+
+Password: admin123
+
+Role: ADMIN
+
+🚀 Deployment
+
+mvn clean package
+
+Run JAR file:
+
+java -jar target/backend-0.0.1-SNAPSHOT.jar
+
+
+📊 Key Endpoints to Test
+Login: POST /api/auth/login
+
+Get Menu: GET /menuitems
+
+Create Order: POST /orders
+
+Dashboard: GET /api/admin/dashboard/stats
+
+🔧 Development
+
+mvn test
+
+Code Formatting
+
+mvn spotless:apply
+
+🤝 Contributing
+Fork the repository
+
+Create a feature branch
+
+Commit your changes
+
+Push to the branch
+
+Create a Pull Request
+
+📝 License
+This project is licensed under the MIT License.
+
+👨‍💻 Developer
+Built with ❤️ using Spring Boot and PostgreSQL.
+ 
