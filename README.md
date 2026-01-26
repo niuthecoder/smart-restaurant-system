@@ -193,13 +193,6 @@ mvn spotless:apply
 - Create a Pull Request  
 
 ---
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
----
-
 ## 👨‍💻 Developer
 
 Built with ❤️ using Spring Boot and PostgreSQL.
