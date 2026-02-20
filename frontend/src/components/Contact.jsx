@@ -1,190 +1,122 @@
-import React, { useState } from 'react';
-import { FiMapPin, FiPhone, FiMail, FiClock, FiSend } from 'react-icons/fi';
-import { adminAPI } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { FiInstagram } from 'react-icons/fi';
+import { FaWhatsapp } from 'react-icons/fa';
+import { messagesAPI } from '../services/api';
 
 const Contact = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: ''
-  });
+  const { t } = useTranslation();
+  const [form, setForm] = useState({ name: '', email: '', content: '' });
+  const [status, setStatus] = useState({ state: 'idle', msg: '' });
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  useEffect(() => {
+    if (window.location.hash === '#contact') {
+      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
+
+  const onChange = (e) => {
+    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = async (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    
-    try {
-      const contactData = {
-        name: formData.name,
-        email: formData.email,
-        subject: formData.subject,
-        message: formData.message,
-        submissionDate: new Date().toISOString()
-      };
+    setStatus({ state: 'sending', msg: '' });
 
-      console.log('📞 Submitting contact form to backend:', contactData);
-      
-      await contactAPI.submitContact(contactData);
-      
-      alert('✅ Message sent successfully! We\'ll get back to you soon. 🍔');
-      setFormData({ name: '', email: '', subject: '', message: '' });
-      
-    } catch (error) {
-      console.error('❌ Contact form submission failed:', error);
-      alert('❌ Failed to send message. Please try again.');
+    try {
+      await messagesAPI.send({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        content: form.content.trim(),
+      });
+
+      setStatus({ state: 'success', msg: t('contact.sent') });
+      setForm({ name: '', email: '', content: '' });
+    } catch (err) {
+      setStatus({ state: 'error', msg: err?.message || t('contact.failed') });
     }
   };
 
   return (
-    <section id="contact" className="py-20 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-5xl font-bold text-gray-900 mb-4">
-            Get In <span className="text-primary-500">Touch</span>
-          </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
-          </p>
+    <section id="contact" className="relative py-20 persian-pattern-bg scroll-mt-20">
+      <div className="persian-corners max-w-2xl mx-auto px-4">
+        <div className="persian-corner-bl" aria-hidden />
+        <div className="persian-corner-br" aria-hidden />
+        <h2 className="font-display text-4xl font-bold text-center text-mono-900 mb-4 persian-section-title">{t('contact.title')}</h2>
+        <span className="persian-title-band" aria-hidden />
+
+        <div className="flex justify-center gap-6 mb-10 mt-8">
+          <a
+            href="https://wa.me/1234567890"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-5 py-3 rounded-sm border border-mono-200 text-mono-700 hover:bg-mono-100 hover:border-mono-400 transition-colors"
+            aria-label="WhatsApp"
+          >
+            <FaWhatsapp className="text-2xl text-[#25D366]" />
+            <span className="font-medium">WhatsApp</span>
+          </a>
+          <a
+            href="https://instagram.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-5 py-3 rounded-sm border border-mono-200 text-mono-700 hover:bg-mono-100 hover:border-mono-400 transition-colors"
+            aria-label="Instagram"
+          >
+            <FiInstagram className="text-2xl text-mono-700" />
+            <span className="font-medium">Instagram</span>
+          </a>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-12">
-          {/* Contact Information */}
-          <div>
-            <h3 className="text-3xl font-bold text-gray-900 mb-6">Visit Us Today</h3>
-            
-            {/* Contact Cards */}
-            <div className="space-y-6 mb-8">
-              <div className="flex items-start p-6 bg-gray-50 rounded-2xl">
-                <FiMapPin className="text-2xl text-primary-500 mt-1 mr-4" />
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Our Location</h4>
-                  <p className="text-gray-600">123 Burger Street<br />Food District, NY 10001</p>
-                </div>
-              </div>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <input
+            className="w-full border border-mono-200 rounded-sm p-3 bg-mono-50 text-mono-900 placeholder-mono-400 focus:outline-none focus:border-mono-500"
+            name="name"
+            placeholder={t('contact.namePlaceholder')}
+            value={form.name}
+            onChange={onChange}
+            required
+          />
+          <input
+            className="w-full border border-mono-200 rounded-sm p-3 bg-mono-50 text-mono-900 placeholder-mono-400 focus:outline-none focus:border-mono-500"
+            name="email"
+            type="email"
+            placeholder={t('contact.emailPlaceholder')}
+            value={form.email}
+            onChange={onChange}
+            required
+          />
+          <textarea
+            className="w-full border border-mono-200 rounded-sm p-3 min-h-[140px] bg-mono-50 text-mono-900 placeholder-mono-400 focus:outline-none focus:border-mono-500"
+            name="content"
+            placeholder={t('contact.messagePlaceholder')}
+            value={form.content}
+            onChange={onChange}
+            required
+          />
 
-              <div className="flex items-start p-6 bg-gray-50 rounded-2xl">
-                <FiPhone className="text-2xl text-primary-500 mt-1 mr-4" />
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Phone Number</h4>
-                  <p className="text-gray-600">+1 (555) 123-BURGER<br />+1 (555) 123-DELIVER</p>
-                </div>
-              </div>
+          <button
+            disabled={status.state === 'sending'}
+            className="w-full bg-mono-800 text-mono-50 py-3 rounded-sm font-medium hover:bg-mono-700 disabled:opacity-60 transition-colors"
+            type="submit"
+          >
+            {status.state === 'sending' ? t('contact.sending') : t('contact.send')}
+          </button>
 
-              <div className="flex items-start p-6 bg-gray-50 rounded-2xl">
-                <FiMail className="text-2xl text-primary-500 mt-1 mr-4" />
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Email Address</h4>
-                  <p className="text-gray-600">hello@burgerhouse.com<br />orders@burgerhouse.com</p>
-                </div>
-              </div>
-
-              <div className="flex items-start p-6 bg-gray-50 rounded-2xl">
-                <FiClock className="text-2xl text-primary-500 mt-1 mr-4" />
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Opening Hours</h4>
-                  <p className="text-gray-600">
-                    Mon-Thu: 11:00 AM - 10:00 PM<br />
-                    Fri-Sat: 11:00 AM - 11:00 PM<br />
-                    Sunday: 12:00 PM - 9:00 PM
-                  </p>
-                </div>
-              </div>
+          {status.state !== 'idle' && (
+            <div
+              className={`p-3 rounded-sm text-center text-sm ${
+                status.state === 'success'
+                  ? 'bg-mono-200/50 text-mono-800 border border-mono-300'
+                  : status.state === 'error'
+                  ? 'bg-mono-200/50 text-mono-700 border border-mono-400'
+                  : 'bg-mono-100 text-mono-700 border border-mono-200'
+              }`}
+            >
+              {status.msg}
             </div>
-
-            {/* Map Placeholder */}
-            <div className="bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl h-64 flex items-center justify-center text-gray-600">
-              <div className="text-center">
-                <div className="text-4xl mb-2">🗺️</div>
-                <p>Interactive Map Would Go Here</p>
-                <p className="text-sm">(Google Maps integration)</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Contact Form */}
-          <div className="bg-gray-50 rounded-3xl p-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Send us a Message</h3>
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Your Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="John Doe"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address *
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="john@example.com"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Subject *
-                </label>
-                <input
-                  type="text"
-                  name="subject"
-                  value={formData.subject}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="How can we help you?"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Message *
-                </label>
-                <textarea
-                  name="message"
-                  value={formData.message}
-                  onChange={handleChange}
-                  required
-                  rows="5"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Tell us more about your inquiry..."
-                ></textarea>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-primary-500 text-white py-4 rounded-xl font-semibold hover:bg-primary-600 transition-all transform hover:scale-105 flex items-center justify-center"
-              >
-                <FiSend className="mr-2" />
-                Send Message
-              </button>
-            </form>
-          </div>
-        </div>
+          )}
+        </form>
       </div>
     </section>
   );

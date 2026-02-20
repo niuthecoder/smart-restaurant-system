@@ -3,17 +3,25 @@ package com.example.restaurant.backend.config;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
 public class JwtUtil {
 
-    private final SecretKey secretKey = Keys
-            .hmacShaKeyFor("mySecretKeyForJWTGenerationInRestaurantApp12345".getBytes());
-    private final long expirationMs = 86400000; // 24 hours
+    private final SecretKey secretKey;
+    private final long expirationMs;
+
+    public JwtUtil(
+            @Value("${app.jwt.secret}") String secret,
+            @Value("${app.jwt.expiration-ms:86400000}") long expirationMs) {
+        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.expirationMs = expirationMs;
+    }
 
     public String generateToken(String username, String role) {
         return Jwts.builder()
@@ -48,7 +56,9 @@ public class JwtUtil {
             Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
             return true;
         } catch (Exception e) {
+            System.out.println("JWT VALIDATION FAILED: " + e.getMessage());
             return false;
         }
     }
+
 }

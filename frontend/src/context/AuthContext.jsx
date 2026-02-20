@@ -1,23 +1,26 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { adminAPI } from '../services/api';
+
+const API_ORIGIN = import.meta.env.VITE_API_ORIGIN || 'http://localhost:8080';
 
 const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [authState, setAuthState] = useState({
+    isAuthenticated: false,
+    user: null,
+    token: null,
+  });
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Check if user is logged in on app start
   useEffect(() => {
     checkAuthStatus();
   }, []);
@@ -25,93 +28,112 @@ export const AuthProvider = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      if (token) {
-        // Validate token with backend
-        const response = await fetch('http://localhost:8080/api/auth/validate', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (response.ok) {
-          const userData = JSON.parse(localStorage.getItem('userData'));
-          setUser(userData);
-        } else {
-          logout();
-        }
+      if (!token) {
+        setLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error('Auth check failed:', error);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const response = await fetch(`${API_ORIGIN}/api/auth/validate`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        let userData = null;
+        try {
+          const raw = localStorage.getItem('user');
+          userData = raw ? JSON.parse(raw) : null;
+        } catch (_) {
+          userData = null;
+        }
+        setAuthState({
+          isAuthenticated: true,
+          user: userData,
+          token,
+        });
+      } else {
+        logout();
+      }
+    } catch (e) {
+      console.error('Auth check failed:', e);
       logout();
     } finally {
       setLoading(false);
     }
   };
 
-  // In AuthContext.jsx, add console logs:
-  const login = async (username, password) => {
+  const login = async (username, password, userType = 'admin') => {
     try {
-      console.log('🔄 Attempting login with:', username);
       setError('');
-      setLoading(true);
-      
-      const response = await fetch('http://localhost:8080/api/auth/login', {
+
+      const response = await fetch(`${API_ORIGIN}/api/auth/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
 
-      console.log('📡 Login response status:', response.status);
-      console.log('📡 Login response ok:', response.ok);
+      if (!response.ok) {
+        let msg = 'Login failed';
+        try {
+          const txt = await response.text();
+          if (txt) {
+            const parsed = JSON.parse(txt);
+            msg = parsed.message || parsed.error || txt;
+          }
+        } catch (_) {
+          // use default msg
+        }
+        throw new Error(msg);
+      }
 
       const data = await response.json();
-      console.log('📦 Login response data:', data);
 
-      if (response.ok) {
-        console.log('✅ Login successful, token:', data.token);
-        localStorage.setItem('authToken', data.token);
-        const userData = {
-          username: data.username,
-          role: data.role
-        };
-        localStorage.setItem('userData', JSON.stringify(userData));
-        setUser(userData);
-        return { success: true };
-      } else {
-        console.log('❌ Login failed:', data.message);
-        setError(data.message || 'Login failed');
-        return { success: false, error: data.message };
+      // role gate
+      if (userType === 'waiter' && data.role !== 'WAITER') {
+        throw new Error('Access denied. Waiter login only.');
       }
-    } catch (error) {
-      console.error('💥 Network error:', error);
-      setError('Network error. Please check backend connection.');
-      return { success: false, error: 'Network error' };
-    } finally {
-      setLoading(false);
+      if (userType === 'admin' && data.role !== 'ADMIN') {
+        throw new Error('Access denied. Admin login only.');
+      }
+
+    
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('user', JSON.stringify(data));
+
+      setAuthState({
+        isAuthenticated: true,
+        user: data,
+        token: data.token,
+      });
+
+      return { success: true, data };
+    } catch (e) {
+      setError(e.message || 'Login failed');
+      return { success: false, error: e.message };
     }
   };
+
   const logout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-    setUser(null);
+    localStorage.removeItem('authToken'); 
+    localStorage.removeItem('user');
+    setAuthState({ isAuthenticated: false, user: null, token: null });
     setError('');
   };
 
   const value = {
-    user,
+    user: authState.user,
+    token: authState.token,
+    isAuthenticated: authState.isAuthenticated,
+    isAdmin: authState.user?.role === 'ADMIN',
+    isWaiter: authState.user?.role === 'WAITER',
     loading,
     error,
     login,
     logout,
-    isAuthenticated: !!user,
-    isAdmin: user?.role === 'ADMIN'
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

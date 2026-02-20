@@ -1,9 +1,6 @@
 package com.example.restaurant.backend.Entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 
 @Entity
 public class RestaurantTable {
@@ -12,17 +9,23 @@ public class RestaurantTable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private int number; // Table number
-    private int capacity; // Number of seats
-    private boolean occupied; // true if occupied, false if free
+    @Column(name = "restaurant_id")
+    private Long restaurantId;
+
+    @Column(unique = true, nullable = false)
+    private int number;
+
+    private int capacity;
+    private boolean occupied;
+
+   
+    @Column(name = "salon")
+    private String salon; // "SALON_1", "SALON_2", "SALON_3"
+    
+    @Column(name = "smoking_allowed")
+    private Boolean smokingAllowed = false;
 
     public RestaurantTable() {
-    }
-
-    public RestaurantTable(int number, int capacity, boolean occupied) {
-        this.number = number;
-        this.capacity = capacity;
-        this.occupied = occupied;
     }
 
     // Getters & Setters
@@ -57,4 +60,24 @@ public class RestaurantTable {
     public void setOccupied(boolean occupied) {
         this.occupied = occupied;
     }
+
+   
+    public String getSalon() {
+        return salon;
+    }
+
+    public void setSalon(String salon) {
+        this.salon = salon;
+    }
+
+    public boolean isSmokingAllowed() {
+        return smokingAllowed;
+    }
+
+    public void setSmokingAllowed(boolean smokingAllowed) {
+        this.smokingAllowed = smokingAllowed;
+    }
+
+    public Long getRestaurantId() { return restaurantId; }
+    public void setRestaurantId(Long restaurantId) { this.restaurantId = restaurantId; }
 }

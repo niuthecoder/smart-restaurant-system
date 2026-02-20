@@ -1,8 +1,22 @@
-import React, { useState } from 'react';
-import { FiUsers, FiClock, FiCalendar, FiCheck, FiX } from 'react-icons/fi';
+import React, { useEffect, useMemo, useState } from 'react';
+import { FiUsers, FiClock, FiCalendar, FiCheck } from 'react-icons/fi';
+import { reservationsAPI, tablesAPI, availabilityAPI } from '../services/api';
+import toast from 'react-hot-toast';
+
+const SALONS = [
+  { key: 'SALON_1', label: 'Salon 1 (Non-Smoking)', smokingAllowed: false },
+  { key: 'SALON_2', label: 'Salon 2 (Smoking Allowed)', smokingAllowed: true },
+  { key: 'SALON_3', label: 'Salon 3 (Smoking Allowed)', smokingAllowed: true },
+];
 
 const BookTable = () => {
+  const [selectedSalon, setSelectedSalon] = useState('SALON_1');
+  const [tables, setTables] = useState([]);
+  const [tablesLoading, setTablesLoading] = useState(true);
+
+  const [reservedTableIds, setReservedTableIds] = useState([]);
   const [selectedTable, setSelectedTable] = useState(null);
+
   const [bookingInfo, setBookingInfo] = useState({
     date: '',
     time: '',
@@ -10,182 +24,363 @@ const BookTable = () => {
     name: '',
     phone: '',
     email: '',
-    specialRequests: ''
+    specialRequests: '',
   });
-  const [bookingStep, setBookingStep] = useState(1); // 1: Select table, 2: Booking form
 
-  // Table data
-  const tables = [
-    { id: 1, seats: 4, type: 'standard', position: { top: '20%', left: '15%' } },
-    { id: 2, seats: 4, type: 'standard', position: { top: '20%', left: '35%' } },
-    { id: 3, seats: 4, type: 'standard', position: { top: '20%', left: '55%' } },
-    { id: 4, seats: 4, type: 'standard', position: { top: '20%', left: '75%' } },
-    { id: 5, seats: 6, type: 'large', position: { top: '50%', left: '25%' } },
-    { id: 6, seats: 4, type: 'vip', position: { top: '50%', left: '45%' } },
-    { id: 7, seats: 4, type: 'vip', position: { top: '50%', left: '65%' } },
-    { id: 8, seats: 4, type: 'vip', position: { top: '70%', left: '15%' } },
-    { id: 9, seats: 4, type: 'vip', position: { top: '70%', left: '35%' } },
-    { id: 10, seats: 4, type: 'vip', position: { top: '70%', left: '75%' } }
+  const [bookingStep, setBookingStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Available time slots (all options)
+  const allTimeSlots = [
+    '11:00 AM','11:30 AM','12:00 PM','12:30 PM','1:00 PM','1:30 PM',
+    '5:00 PM','5:30 PM','6:00 PM','6:30 PM','7:00 PM','7:30 PM','8:00 PM'
   ];
 
-  // Available time slots
-  const timeSlots = [
-    '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM',
-    '5:00 PM', '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM', '7:30 PM', '8:00 PM'
-  ];
+  /** True if the given date + time slot is already in the past (browser local time). */
+  const isSlotInPast = (dateStr, timeSlot) => {
+    if (!dateStr || !timeSlot) return false;
+    const [timePart, ampm] = timeSlot.split(' ');
+    let [h, m] = timePart.split(':').map(Number);
+    if (ampm === 'PM' && h !== 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    const slotDate = new Date(dateStr);
+    slotDate.setHours(h, m, 0, 0);
+    return slotDate.getTime() <= Date.now();
+  };
+
+  /** For today, only show slots that are still in the future. */
+  const timeSlots = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    if (bookingInfo.date !== today) return allTimeSlots;
+    return allTimeSlots.filter((slot) => !isSlotInPast(today, slot));
+  }, [bookingInfo.date]);
+
+  useEffect(() => {
+    if (bookingInfo.date && bookingInfo.time && timeSlots.length > 0 && !timeSlots.includes(bookingInfo.time)) {
+      setBookingInfo((prev) => ({ ...prev, time: '' }));
+    }
+  }, [bookingInfo.date, bookingInfo.time, timeSlots]);
+
+  // ------------------------
+  // Fetch tables from backend
+  // ------------------------
+  useEffect(() => {
+  const loadTables = async () => {
+    try {
+      setTablesLoading(true);
+      const data = await tablesAPI.getTables(); // /api/tables
+      setTables(data || []);
+    } catch (e) {
+      console.error('Failed to load tables', e);
+      setTables([]);
+    } finally {
+      setTablesLoading(false);
+    }
+  };
+
+  loadTables();
+}, []);
+  // If backend doesn't have salon fields yet, derive by table.number
+  const normalizedTables = useMemo(() => {
+    return (tables || []).map((t) => {
+      let salon = t.salon;
+      let smokingAllowed = t.smokingAllowed;
+
+      if (!salon) {
+        const n = t.number;
+        if (n <= 10) { salon = 'SALON_1'; smokingAllowed = false; }
+        else if (n <= 20) { salon = 'SALON_2'; smokingAllowed = true; }
+        else { salon = 'SALON_3'; smokingAllowed = true; }
+      }
+
+      return {
+        ...t,
+        salon,
+        smokingAllowed,
+        seats: t.capacity ?? 4,
+      };
+    });
+  }, [tables]);
+
+  const salonTables = useMemo(() => {
+    return normalizedTables
+      .filter(t => t.salon === selectedSalon)
+      .sort((a, b) => a.number - b.number);
+  }, [normalizedTables, selectedSalon]);
 
   const handleInputChange = (e) => {
-    setBookingInfo({
-      ...bookingInfo,
-      [e.target.name]: e.target.value
-    });
+    setBookingInfo(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSalonChange = (salonKey) => {
+    setSelectedSalon(salonKey);
+    setSelectedTable(null);
+    setBookingStep(1);
   };
 
   const handleTableSelect = (table) => {
     setSelectedTable(table);
-    setBookingInfo(prev => ({
-      ...prev,
-      guests: Math.min(prev.guests, table.seats)
-    }));
+    setBookingInfo(prev => ({ ...prev, guests: Math.min(prev.guests, table.seats) }));
   };
 
-  const handleBookTable = (e) => {
+  const buildReservationPayload = () => {
+    const { date, time, guests, name, phone, email, specialRequests } = bookingInfo;
+
+    const [timePart, ampm] = time.split(' ');
+    let [hour, minute] = timePart.split(':').map(Number);
+
+    if (ampm === 'PM' && hour !== 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+
+    const time24 = `${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')}:00`;
+    const reservationTime = `${date}T${time24}`;
+
+    return {
+      guestName: name,
+      guestPhone: phone,
+      guestEmail: email,
+      tableId: selectedTable?.id, // ✅ DB id
+      reservationTime,
+      guestCount: Number(guests),
+      specialRequests,
+    };
+  };
+
+  // -------------------------------------------
+  // Check reserved tables for selected date/time
+  // -------------------------------------------
+  useEffect(() => {
+    const checkReserved = async () => {
+      if (!bookingInfo.date || !bookingInfo.time) {
+        setReservedTableIds([]);
+        return;
+      }
+
+      try {
+        const { date, time } = bookingInfo;
+        const [timePart, ampm] = time.split(' ');
+        let [hour, minute] = timePart.split(':').map(Number);
+        if (ampm === 'PM' && hour !== 12) hour += 12;
+        if (ampm === 'AM' && hour === 12) hour = 0;
+        const time24 = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+
+        const available = await availabilityAPI.getAvailability(date, time24);
+        const availableIds = new Set(Array.isArray(available) ? available.map((t) => t.id).filter(Boolean) : []);
+        const allTableIds = normalizedTables?.map((t) => t.id) ?? [];
+        const reserved = allTableIds.filter((id) => !availableIds.has(id));
+        setReservedTableIds(reserved);
+
+        // If currently selected becomes reserved, unselect it
+        if (selectedTable?.id && reserved.includes(selectedTable.id)) {
+          setSelectedTable(null);
+          setBookingStep(1);
+        }
+      } catch (e) {
+        console.error('Reserved check failed:', e);
+        setReservedTableIds([]);
+      }
+    };
+
+    checkReserved();
+  }, [bookingInfo.date, bookingInfo.time, normalizedTables, selectedTable?.id]);
+
+  const handleBookTable = async (e) => {
     e.preventDefault();
-    
-    if (!selectedTable) {
-      alert('Please select a table first!');
-      return;
+
+    if (!selectedTable) return toast.error('Please select a table first!');
+    if (reservedTableIds.includes(selectedTable.id)) return toast.error('This table is already booked for that time.');
+    if (isSlotInPast(bookingInfo.date, bookingInfo.time)) {
+      return toast.error('That date and time are in the past. Please choose a future time.');
     }
 
-    // Here you would connect to your backend
-    alert(`🎉 Table booked successfully!\n\nTable ${selectedTable.id} (${selectedTable.seats} seats)\n${bookingInfo.date} at ${bookingInfo.time}\nFor ${bookingInfo.guests} guests`);
-    
-    // Reset form
-    setSelectedTable(null);
-    setBookingInfo({
-      date: '',
-      time: '',
-      guests: 2,
-      name: '',
-      phone: '',
-      email: '',
-      specialRequests: ''
-    });
-    setBookingStep(1);
-  };
+    try {
+      setSubmitting(true);
+      const payload = buildReservationPayload();
+      const res = await reservationsAPI.createReservation(payload);
+      const code = res?.reservationCode ? ` Reservation code: ${res.reservationCode}` : '';
+      toast.success(`Booked! Table ${selectedTable.number} • ${bookingInfo.date} at ${bookingInfo.time}${code}`, { duration: 6000 });
 
-  const getTableColor = (table) => {
-    switch (table.type) {
-      case 'vip': return 'bg-gradient-to-br from-yellow-400 to-yellow-600';
-      case 'large': return 'bg-gradient-to-br from-blue-400 to-blue-600';
-      default: return 'bg-gradient-to-br from-primary-400 to-primary-600';
-    }
-  };
-
-  const getTableLabel = (table) => {
-    switch (table.type) {
-      case 'vip': return 'VIP';
-      case 'large': return 'Large';
-      default: return 'Standard';
+      setSelectedTable(null);
+      setBookingInfo({
+        date: '',
+        time: '',
+        guests: 2,
+        name: '',
+        phone: '',
+        email: '',
+        specialRequests: '',
+      });
+      setReservedTableIds([]);
+      setBookingStep(1);
+    } catch (err) {
+      console.error('Failed to create reservation', err);
+      const msg = err?.message || String(err);
+      const isPast = msg.includes('past') || msg.includes('in the past');
+      const isConflict = msg.includes('409') || msg.includes('TABLE_ALREADY_BOOKED') || msg.includes('TIME_SLOT_CONFLICT') || msg.includes('currently in use');
+      const isValidation = msg.includes('400') || msg.includes('required');
+      const userMsg = isPast
+        ? 'That time is in the past. Please choose a future date and time.'
+        : isConflict
+          ? 'This table (or time slot) is already booked or in use. Please pick another table or time.'
+          : isValidation
+            ? 'Invalid booking (check date, time, and table). Try again.'
+            : `Booking failed: ${msg.length > 80 ? msg.slice(0, 80) + '…' : msg}`;
+      toast.error(userMsg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <section id="book-table" className="min-h-screen bg-gray-50 py-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Header */}
+
         <div className="text-center mb-12">
           <h2 className="text-5xl font-bold text-gray-900 mb-4">
             Book a <span className="text-primary-500">Table</span>
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Reserve your spot for an unforgettable dining experience at Burger House
+            Choose a salon and reserve one of our 30 tables (4 seats each)
           </p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12">
-          
-          {/* Left Column - Table Selection */}
+
+          {/* Left: Table selection + form */}
           <div className="bg-white rounded-3xl shadow-xl p-8">
             <h3 className="text-2xl font-bold text-gray-900 mb-6">
               {bookingStep === 1 ? 'Select Your Table' : 'Confirm Your Booking'}
             </h3>
 
-            {bookingStep === 1 ? (
-              <>
-                {/* Table Layout Visualization */}
-                <div className="relative bg-gray-100 rounded-2xl h-96 mb-6 border-2 border-gray-200">
-                  {/* Restaurant Layout Elements */}
-                  <div className="absolute inset-4 bg-green-100 rounded-lg border border-green-200">
-                    {/* Windows */}
-                    <div className="absolute top-4 left-4 right-4 h-8 bg-blue-100 rounded-t-lg border-b border-blue-200"></div>
-                    
-                    {/* Tables */}
-                    {tables.map(table => (
-                      <div
-                        key={table.id}
-                        onClick={() => handleTableSelect(table)}
-                        className={`absolute w-16 h-16 rounded-2xl cursor-pointer transform transition-all duration-300 hover:scale-110 ${
-                          selectedTable?.id === table.id 
-                            ? 'ring-4 ring-green-400 scale-110' 
-                            : 'hover:ring-2 hover:ring-white'
-                        } ${getTableColor(table)}`}
-                        style={table.position}
-                      >
-                        <div className="flex flex-col items-center justify-center h-full text-white">
-                          <FiUsers className="mb-1" />
-                          <span className="text-xs font-bold">{table.seats}</span>
-                          <span className="text-[10px] opacity-90">{getTableLabel(table)}</span>
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Kitchen Area */}
-                    <div className="absolute bottom-4 left-4 right-4 h-12 bg-red-100 rounded-b-lg border-t border-red-200 flex items-center justify-center">
-                      <span className="text-gray-600 text-sm font-semibold">Kitchen</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Table Legend */}
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="flex items-center justify-center p-3 bg-primary-500 rounded-lg text-white">
-                    <FiUsers className="mr-2" />
-                    <span>Standard (4 seats)</span>
-                  </div>
-                  <div className="flex items-center justify-center p-3 bg-blue-500 rounded-lg text-white">
-                    <FiUsers className="mr-2" />
-                    <span>Large (6 seats)</span>
-                  </div>
-                  <div className="flex items-center justify-center p-3 bg-yellow-500 rounded-lg text-white">
-                    <FiUsers className="mr-2" />
-                    <span>VIP (4 seats)</span>
-                  </div>
-                </div>
-
+            {/* Salon selector */}
+            <div className="grid md:grid-cols-3 gap-3 mb-6">
+              {SALONS.map(s => (
                 <button
-                  onClick={() => selectedTable && setBookingStep(2)}
-                  disabled={!selectedTable}
-                  className={`w-full py-4 rounded-xl font-semibold transition-all transform ${
-                    selectedTable 
-                      ? 'bg-primary-500 text-white hover:bg-primary-600 hover:scale-105' 
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  key={s.key}
+                  type="button"
+                  onClick={() => handleSalonChange(s.key)}
+                  className={`p-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+                    selectedSalon === s.key ? 'border-primary-500 bg-primary-50' : 'border-gray-200'
                   }`}
                 >
-                  {selectedTable ? `Book Table ${selectedTable.id}` : 'Select a Table to Continue'}
+                  <div>{s.label}</div>
                 </button>
+              ))}
+            </div>
+
+            {bookingStep === 1 ? (
+              <>
+                {tablesLoading ? (
+                  <div className="py-10 text-center text-gray-600">Loading tables...</div>
+                ) : salonTables.length === 0 ? (
+                  <div className="py-10 text-center text-amber-700 bg-amber-50 rounded-xl border border-amber-200">
+                    No tables available. Make sure the backend is running (e.g. Docker or <code className="text-sm">mvn spring-boot:run</code>) and the app is using the correct API URL.
+                  </div>
+                ) : (
+                  <>
+                    {/* Simple grid of tables */}
+                    <div className="grid grid-cols-5 gap-3 mb-6">
+                      {salonTables.map(table => {
+                        const isReserved = reservedTableIds.includes(table.id);
+
+                        return (
+                          <button
+                            key={table.id}
+                            type="button"
+                            disabled={isReserved}
+                            onClick={() => !isReserved && handleTableSelect(table)}
+                            className={`h-14 rounded-xl border-2 font-bold transition-all ${
+                              isReserved
+                                ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : selectedTable?.id === table.id
+                                  ? 'border-green-500 bg-green-50'
+                                  : 'border-gray-200 bg-white hover:border-primary-300'
+                            }`}
+                            title={
+                              isReserved
+                                ? 'Already booked for selected date/time'
+                                : `${table.smokingAllowed ? 'Smoking Allowed' : 'Non-Smoking'}`
+                            }
+                          >
+                            {table.number}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Salon info */}
+                    <div className="mb-6 p-4 rounded-2xl bg-gray-50 border">
+                      <div className="text-sm text-gray-700">
+                        <strong>Rules:</strong>{' '}
+                        {selectedSalon === 'SALON_1'
+                          ? 'Non-Smoking only.'
+                          : 'Smoking is allowed in this salon.'}
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">All tables are 4 seats.</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Tip: pick date & time first to see booked tables disabled.
+                      </div>
+                    </div>
+
+                    {/* Date/Time quick pick (optional but useful) */}
+                    <div className="grid md:grid-cols-2 gap-4 mb-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <FiCalendar className="inline mr-2" />
+                          Date *
+                        </label>
+                        <input
+                          type="date"
+                          name="date"
+                          value={bookingInfo.date}
+                          onChange={handleInputChange}
+                          min={new Date().toISOString().split('T')[0]}
+                          className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <FiClock className="inline mr-2" />
+                          Time *
+                        </label>
+                        <select
+                          name="time"
+                          value={bookingInfo.time}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        >
+                          <option value="">Select time</option>
+                          {timeSlots.map(slot => (
+                            <option key={slot} value={slot}>{slot}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => selectedTable && setBookingStep(2)}
+                      disabled={!selectedTable}
+                      className={`w-full py-4 rounded-xl font-semibold transition-all transform ${
+                        selectedTable
+                          ? 'bg-primary-500 text-white hover:bg-primary-600 hover:scale-105'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      {selectedTable ? `Book Table ${selectedTable.number}` : 'Select a Table to Continue'}
+                    </button>
+                  </>
+                )}
               </>
             ) : (
-              /* Booking Form */
               <form onSubmit={handleBookTable} className="space-y-6">
-                {/* Selected Table Info */}
                 <div className="bg-gradient-to-r from-primary-50 to-primary-100 rounded-2xl p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-semibold text-gray-900">Selected Table</h4>
                       <p className="text-sm text-gray-600">
-                        Table {selectedTable.id} • {selectedTable.seats} seats • {getTableLabel(selectedTable)}
+                        Table {selectedTable?.number} • 4 seats • {selectedSalon}
+                        {' • '}
+                        {selectedTable?.smokingAllowed ? 'Smoking Allowed' : 'Non-Smoking'}
                       </p>
                     </div>
                     <button
@@ -193,12 +388,11 @@ const BookTable = () => {
                       onClick={() => setBookingStep(1)}
                       className="text-primary-600 hover:text-primary-700 text-sm font-semibold"
                     >
-                      Change Table
+                      Change
                     </button>
                   </div>
                 </div>
 
-                {/* Date & Time */}
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -235,11 +429,10 @@ const BookTable = () => {
                   </div>
                 </div>
 
-                {/* Guests */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <FiUsers className="inline mr-2" />
-                    Number of Guests * (Max: {selectedTable?.seats})
+                    Guests * (Max: 4)
                   </label>
                   <select
                     name="guests"
@@ -248,13 +441,12 @@ const BookTable = () => {
                     required
                     className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
-                    {[...Array(selectedTable?.seats || 6).keys()].map(i => (
-                      <option key={i + 1} value={i + 1}>{i + 1} {i === 0 ? 'guest' : 'guests'}</option>
+                    {[1,2,3,4].map(n => (
+                      <option key={n} value={n}>{n} {n === 1 ? 'guest' : 'guests'}</option>
                     ))}
                   </select>
                 </div>
 
-                {/* Contact Information */}
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
@@ -265,11 +457,10 @@ const BookTable = () => {
                       onChange={handleInputChange}
                       required
                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="John Doe"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
                     <input
                       type="tel"
                       name="phone"
@@ -277,11 +468,10 @@ const BookTable = () => {
                       onChange={handleInputChange}
                       required
                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="(555) 123-4567"
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
                     <input
                       type="email"
                       name="email"
@@ -289,12 +479,10 @@ const BookTable = () => {
                       onChange={handleInputChange}
                       required
                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="john@example.com"
                     />
                   </div>
                 </div>
 
-                {/* Special Requests */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
                   <textarea
@@ -303,8 +491,8 @@ const BookTable = () => {
                     onChange={handleInputChange}
                     rows="3"
                     className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Any special requirements or celebrations?"
-                  ></textarea>
+                    placeholder="Birthday, allergies, wheelchair access, etc."
+                  />
                 </div>
 
                 <div className="flex space-x-4">
@@ -317,70 +505,49 @@ const BookTable = () => {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-green-500 text-white py-4 rounded-xl font-semibold hover:bg-green-600 transition-all transform hover:scale-105"
+                    disabled={submitting}
+                    className={`flex-1 bg-green-500 text-white py-4 rounded-xl font-semibold transition-all transform ${
+                      submitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-green-600 hover:scale-105'
+                    }`}
                   >
-                    Confirm Booking
+                    {submitting ? 'Booking...' : 'Confirm Booking'}
                   </button>
                 </div>
               </form>
             )}
           </div>
 
-          {/* Right Column - Restaurant Info */}
+          {/* Right column (keep yours / you can expand later) */}
           <div className="space-y-6">
-            {/* Restaurant Hours */}
-            <div className="bg-white rounded-3xl shadow-xl p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Restaurant Hours</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Monday - Thursday</span>
-                  <span className="font-semibold">11:00 AM - 10:00 PM</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Friday - Saturday</span>
-                  <span className="font-semibold">11:00 AM - 11:00 PM</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Sunday</span>
-                  <span className="font-semibold">12:00 PM - 9:00 PM</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Features */}
             <div className="bg-white rounded-3xl shadow-xl p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-4">Why Book With Us?</h3>
               <div className="space-y-4">
                 <div className="flex items-center">
                   <FiCheck className="text-green-500 mr-3" />
-                  <span>Guanteed table reservation</span>
+                  <span>Guaranteed table reservation</span>
                 </div>
                 <div className="flex items-center">
                   <FiCheck className="text-green-500 mr-3" />
-                  <span>VIP seating options available</span>
+                  <span>Choose salon (smoking / non-smoking)</span>
                 </div>
                 <div className="flex items-center">
                   <FiCheck className="text-green-500 mr-3" />
-                  <span>Special occasion arrangements</span>
-                </div>
-                <div className="flex items-center">
-                  <FiCheck className="text-green-500 mr-3" />
-                  <span>15-minute grace period</span>
+                  <span>Easy booking in seconds</span>
                 </div>
               </div>
             </div>
 
-            {/* Contact Info */}
             <div className="bg-gradient-to-br from-primary-500 to-secondary-500 rounded-3xl shadow-xl p-6 text-white">
               <h3 className="text-xl font-bold mb-4">Need Help?</h3>
-              <p className="mb-4">Our team is happy to assist with your reservation:</p>
+              <p className="mb-4">Our team is happy to assist:</p>
               <div className="space-y-2">
-                <div>📞 (555) 123-BURGER</div>
-                <div>✉️ reservations@burgerhouse.com</div>
-                <div>🕒 Available 9AM-9PM daily</div>
+                <div>📞 +1 (555) 123-PERSIAN</div>
+                <div>✉️ reservations@saffronhouse.com</div>
+                <div>🕒 9AM-9PM daily</div>
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </section>

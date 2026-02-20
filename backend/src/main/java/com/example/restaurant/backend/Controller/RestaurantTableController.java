@@ -2,39 +2,22 @@ package com.example.restaurant.backend.Controller;
 
 import com.example.restaurant.backend.Entity.RestaurantTable;
 import com.example.restaurant.backend.Repository.RestaurantTableRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/tables")
+@RequestMapping("/api/tables")
 public class RestaurantTableController {
 
-    @Autowired
-    private RestaurantTableRepository tableRepository;
+    private final RestaurantTableRepository tableRepo;
 
-    // CREATE
-    @PostMapping
-    public RestaurantTable createTable(@RequestBody RestaurantTable table) {
-        return tableRepository.save(table);
+    public RestaurantTableController(RestaurantTableRepository tableRepo) {
+        this.tableRepo = tableRepo;
     }
 
-    // READ ALL
     @GetMapping
-    public List<RestaurantTable> getAllTables() {
-        return tableRepository.findAll();
-    }
-
-    // READ ONE
-    @GetMapping("/{id}")
-    public RestaurantTable getTableById(@PathVariable Long id) {
-        return tableRepository.findById(id).orElse(null);
-    }
-
-    // DELETE
-    @DeleteMapping("/{id}")
-    public void deleteTable(@PathVariable Long id) {
-        tableRepository.deleteById(id);
+    public List<RestaurantTable> getAll() {
+        return tableRepo.findAll();
     }
 }

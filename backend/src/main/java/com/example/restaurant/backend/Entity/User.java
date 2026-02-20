@@ -14,7 +14,11 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "restaurant_id", nullable = true)
+    private Long restaurantId;
+
     @NotBlank(message = "Username is required")
+
     @Column(unique = true)
     private String username;
 
@@ -96,4 +100,7 @@ public class User {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+
+    public Long getRestaurantId() { return restaurantId; }
+    public void setRestaurantId(Long restaurantId) { this.restaurantId = restaurantId; }
 }

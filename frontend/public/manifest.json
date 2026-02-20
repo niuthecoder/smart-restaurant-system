@@ -1,0 +1,18 @@
+{
+  "name": "Saffron House",
+  "short_name": "Saffron House",
+  "description": "Persian restaurant — kebabs, rice, stews. Order, reserve, and enjoy.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#E63946",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

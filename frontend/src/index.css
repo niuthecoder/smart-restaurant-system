@@ -2,6 +2,142 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Minimal Persian monochrome base */
+html {
+  scroll-behavior: smooth;
+}
+body {
+  min-height: 100vh;
+  margin: 0;
+  background-color: #faf8f6;
+  font-family: 'Vazirmatn', system-ui, sans-serif;
+  color: #2a221c;
+}
+#root {
+  min-height: 100vh;
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Minimal section background + very subtle Persian geometric */
+.persian-pattern-bg {
+  background-color: #faf8f6;
+  background-image: 
+    linear-gradient(30deg, rgba(42, 34, 28, 0.02) 12%, transparent 12.5%, transparent 87%, rgba(42, 34, 28, 0.02) 87.5%),
+    linear-gradient(150deg, rgba(42, 34, 28, 0.02) 12%, transparent 12.5%, transparent 87%, rgba(42, 34, 28, 0.02) 87.5%);
+  background-size: 60px 100px;
+  background-position: 0 0, 30px 50px;
+}
+
+/* Primary CTA – slight emphasis for hierarchy */
+.cta-primary:focus-visible {
+  outline: 2px solid #2a221c;
+  outline-offset: 3px;
+}
+.cta-secondary:focus-visible {
+  outline: 2px solid rgba(255,255,255,0.8);
+  outline-offset: 3px;
+}
+
+/* Section title – single line accent */
+.persian-section-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  position: relative;
+  display: inline-block;
+}
+.persian-section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 3px;
+  background: #9a7b5c;
+  border-radius: 2px;
+}
+
+/* Card – minimal border */
+.persian-card {
+  border: 1px solid rgba(42, 34, 28, 0.08);
+}
+
+/* ---------- Persian architecture ---------- */
+/* Four corner frames (iwan-style corners) */
+.persian-corners {
+  position: relative;
+}
+.persian-corners::before,
+.persian-corners::after {
+  content: '';
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-color: rgba(154, 123, 92, 0.35);
+  border-style: solid;
+  border-width: 0;
+  pointer-events: none;
+}
+.persian-corners::before {
+  top: 16px;
+  left: 16px;
+  border-left-width: 2px;
+  border-top-width: 2px;
+  border-radius: 4px 0 0 0;
+}
+.persian-corners::after {
+  top: 16px;
+  right: 16px;
+  border-right-width: 2px;
+  border-top-width: 2px;
+  border-radius: 0 4px 0 0;
+}
+.persian-corners .persian-corner-bl {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  width: 48px;
+  height: 48px;
+  border-left: 2px solid rgba(154, 123, 92, 0.35);
+  border-bottom: 2px solid rgba(154, 123, 92, 0.35);
+  border-radius: 0 0 0 4px;
+  pointer-events: none;
+}
+.persian-corners .persian-corner-br {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  border-right: 2px solid rgba(154, 123, 92, 0.35);
+  border-bottom: 2px solid rgba(154, 123, 92, 0.35);
+  border-radius: 0 0 4px 0;
+  pointer-events: none;
+}
+
+/* Dark section corners (e.g. footer) */
+.persian-corners-on-dark::before,
+.persian-corners-on-dark::after {
+  border-color: rgba(243, 239, 233, 0.35);
+}
+.persian-corners-on-dark .persian-corner-bl,
+.persian-corners-on-dark .persian-corner-br {
+  border-color: rgba(243, 239, 233, 0.35);
+}
+
+/* Geometric band under section titles (girih-inspired) */
+.persian-title-band {
+  display: block;
+  margin: 12px auto 0;
+  width: 120px;
+  height: 8px;
+  background: transparent no-repeat center;
+  background-size: 120px 8px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 8'%3E%3Cg fill='none' stroke='%239a7b5c' stroke-width='.8' opacity='.9'%3E%3Cpath d='M0 4h20M25 0v8M30 4h20M55 4h10M70 0v8M75 4h10M90 0v8M95 4h25'/%3E%3Crect x='40' y='2' width='8' height='4'/%3E%3Crect x='72' y='2' width='8' height='4'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -27,9 +163,19 @@
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.8s ease-out;
+  animation: fadeIn 0.9s ease-out both;
 }
+.animation-delay-150 { animation-delay: 0.15s; }
+.animation-delay-200 { animation-delay: 0.25s; }
 
 .animate-slide-up {
-  animation: slideUp 0.6s ease-out;
+  animation: slideUp 0.7s ease-out both;
+}
+
+@keyframes subtleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.animate-subtle-float {
+  animation: subtleFloat 4s ease-in-out infinite;
 }

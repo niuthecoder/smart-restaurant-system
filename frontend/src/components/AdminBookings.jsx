@@ -3,9 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { FiCalendar, FiUser, FiPhone, FiMail, FiClock, FiCheck, FiX, FiEdit, FiRefreshCw } from 'react-icons/fi';
 import { adminAPI } from '../services/api';
 
+const SALONS = ['SALON_1', 'SALON_2', 'SALON_3'];
+
 const AdminBookings = () => {
   const [reservations, setReservations] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('');
+  const [salonFilter, setSalonFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -13,7 +18,12 @@ const AdminBookings = () => {
     try {
       setLoading(true);
       setError(null);
-      const reservationsData = await adminAPI.getReservations();
+      const params = {};
+      if (dateFilter) params.date = dateFilter;
+      if (salonFilter) params.salon = salonFilter;
+      if (filter !== 'all') params.status = filter;
+      if (search.trim()) params.search = search.trim();
+      const reservationsData = await adminAPI.getReservations(params);
       setReservations(reservationsData);
     } catch (err) {
       setError('Failed to fetch reservations.');
@@ -25,7 +35,12 @@ const AdminBookings = () => {
 
   useEffect(() => {
     fetchReservations();
-  }, []);
+  }, [filter, dateFilter, salonFilter]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchReservations();
+  };
 
   const updateReservationStatus = async (id, newStatus) => {
     try {
@@ -75,7 +90,33 @@ const AdminBookings = () => {
           <p className="text-sm text-green-600">✅ {reservations.length} reservations loaded</p>
         </div>
         
-        <div className="flex space-x-2 mt-4 md:mt-0">
+        <div className="flex flex-wrap items-center gap-2 mt-4 md:mt-0">
+          <form onSubmit={handleSearch} className="flex gap-2 flex-1 min-w-[200px]">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search name or phone"
+              className="px-3 py-2 border rounded-lg text-sm"
+            />
+            <button type="submit" className="px-3 py-2 bg-gray-200 rounded-lg text-sm">Search</button>
+          </form>
+          <input
+            type="date"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="px-3 py-2 border rounded-lg text-sm"
+          />
+          <select
+            value={salonFilter}
+            onChange={(e) => setSalonFilter(e.target.value)}
+            className="px-3 py-2 border rounded-lg text-sm"
+          >
+            <option value="">All salons</option>
+            {SALONS.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
           <button
             onClick={fetchReservations}
             className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center"
@@ -83,8 +124,7 @@ const AdminBookings = () => {
             <FiRefreshCw className="mr-2" />
             Refresh
           </button>
-          
-          {['all', 'PENDING', 'CONFIRMED', 'CANCELLED'].map(status => (
+          {['all', 'PENDING', 'CONFIRMED', 'CANCELLED', 'NO_SHOW'].map(status => (
             <button
               key={status}
               onClick={() => setFilter(status)}
@@ -105,11 +145,15 @@ const AdminBookings = () => {
           <div key={reservation.id} className="bg-white rounded-2xl shadow-lg p-6">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4">
               <div className="flex-1">
-                <div className="flex items-center mb-2">
+                <div className="flex items-center mb-2 flex-wrap gap-2">
                   <h3 className="text-lg font-bold text-gray-900">Reservation #{reservation.id}</h3>
-                  <span className={`ml-3 px-3 py-1 rounded-full text-xs font-medium ${
+                  {reservation.reservationCode && (
+                    <span className="text-sm font-mono text-gray-600">({reservation.reservationCode})</span>
+                  )}
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                     reservation.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' :
                     reservation.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                    reservation.status === 'NO_SHOW' ? 'bg-gray-100 text-gray-800' :
                     'bg-red-100 text-red-800'
                   }`}>
                     {reservation.status || 'PENDING'}
@@ -149,7 +193,7 @@ const AdminBookings = () => {
                 )}
               </div>
 
-              <div className="flex space-x-2 mt-4 lg:mt-0">
+              <div className="flex flex-wrap gap-2 mt-4 lg:mt-0">
                 {(!reservation.status || reservation.status === 'PENDING') && (
                   <button
                     onClick={() => updateReservationStatus(reservation.id, 'CONFIRMED')}
@@ -157,6 +201,14 @@ const AdminBookings = () => {
                   >
                     <FiCheck className="mr-2" />
                     Confirm
+                  </button>
+                )}
+                {(reservation.status === 'PENDING' || reservation.status === 'CONFIRMED') && (
+                  <button
+                    onClick={() => updateReservationStatus(reservation.id, 'NO_SHOW')}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center"
+                  >
+                    Mark NO_SHOW
                   </button>
                 )}
                 <button

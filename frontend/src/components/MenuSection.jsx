@@ -1,31 +1,91 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useCart } from '../context/CartContext';
-import { fetchMenuItems } from '../data/mockData';
+import { menuAPI } from '../services/api';
+import { getMockMenuItems } from '../data/mockData';
+import { resolveMenuImage } from '../data/menuImageMap';
+
+// Menu order: Appetizers → Soups → Salads → Mains (Kebab, Rice, Stew) → Drinks → Desserts → Other
+const CATEGORY_LABELS = [
+  { key: 'Appetizer', label: 'Appetizers 🧆' },
+  { key: 'Soup', label: 'Soups & Ash 🍵' },
+  { key: 'Salad', label: 'Salads 🥗' },
+  { key: 'Kebab', label: 'Kebabs 🍢' },
+  { key: 'Rice', label: 'Rice 🍚' },
+  { key: 'Stew', label: 'Stews 🍲' },
+  { key: 'Drink', label: 'Drinks 🥤' },
+  { key: 'Dessert', label: 'Desserts 🍯' },
+  { key: 'Pizza', label: 'Pizza 🍕' },
+  { key: 'Other', label: 'Other 🍽️' },
+];
+
+const CATEGORY_KEYS = ['Appetizer', 'Soup', 'Salad', 'Kebab', 'Rice', 'Stew', 'Drink', 'Dessert', 'Pizza', 'Other'];
+
+/** Normalize backend category to match our keys (case-insensitive). Only exact matches; unknown → Other. */
+const normalizeCategory = (cat) => {
+  if (!cat || typeof cat !== 'string') return 'Other';
+  const c = cat.trim();
+  const found = CATEGORY_KEYS.find((k) => k.toLowerCase() === c.toLowerCase());
+  return found || 'Other';
+}
+
+const emojiForCategory = (cat) => {
+  switch (cat) {
+    case 'Kebab': return '🍢';
+    case 'Rice': return '🍚';
+    case 'Stew': return '🍲';
+    case 'Soup': return '🍵';
+    case 'Salad': return '🥗';
+    case 'Drink': return '🥤';
+    case 'Appetizer': return '🧆';
+    case 'Dessert': return '🍯';
+    case 'Pizza': return '🍕';
+    case 'Other': return '🍽️';
+    default: return '🍽️';
+  }
+};
 
 const MenuSection = () => {
-  const [activeCategory, setActiveCategory] = useState('burgers');
+  const { t } = useTranslation();
+  const [activeCategory, setActiveCategory] = useState('Appetizer');
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [backendStatus, setBackendStatus] = useState('checking');
+  const [searchTerm, setSearchTerm] = useState('');
   const { addToCart } = useCart();
-
-  const categories = ["burgers", "chicken", "fries", "drinks", "desserts"];
 
   useEffect(() => {
     const loadMenuItems = async () => {
       try {
         setLoading(true);
         setBackendStatus('checking');
-        
-        console.log('🔄 Loading menu items...');
-        const items = await fetchMenuItems();
-        
-        setMenuItems(items);
-        setBackendStatus('connected');
-        console.log('✅ Menu loaded successfully');
+
+        const items = await menuAPI.getMenuItems();
+        const list = Array.isArray(items) ? items : (items?.content ?? []);
+        const mockDescriptions = Object.fromEntries(
+          getMockMenuItems().map((m) => [m.name, m.description])
+        );
+        const normalized = (list || []).map((i) => ({
+          id: i.id,
+          name: i.name,
+          price: i.price,
+          category: normalizeCategory(i.category),
+          available: i.available !== false,
+          description: i.description || mockDescriptions[i.name] || 'Freshly prepared.',
+          tags: i.tags,
+          image: i.image,
+        }));
+        if (normalized.length > 0) {
+          setMenuItems(normalized);
+          setBackendStatus('connected');
+        } else {
+          setBackendStatus('disconnected');
+          setMenuItems(getMockMenuItems().map((i) => ({ ...i, category: normalizeCategory(i.category) })));
+        }
       } catch (error) {
-        console.error('Error loading menu:', error);
+        console.warn('Menu API unavailable, using local menu:', error?.message);
         setBackendStatus('disconnected');
+        setMenuItems(getMockMenuItems().map((i) => ({ ...i, category: normalizeCategory(i.category) })));
       } finally {
         setLoading(false);
       }
@@ -34,10 +94,55 @@ const MenuSection = () => {
     loadMenuItems();
   }, []);
 
-  const filteredItems = menuItems.filter(item => item.category === activeCategory);
+  const isSearching = Boolean((searchTerm || '').trim());
+  const filteredItems = useMemo(() => {
+    const term = (searchTerm || '').trim().toLowerCase();
+    const available = menuItems.filter((i) => i.available !== false);
+    // When searching: show matches from all categories, not just the active tab
+    if (term) {
+      return available.filter(
+        (i) =>
+          (i.name || '').toLowerCase().includes(term) ||
+          (i.description || '').toLowerCase().includes(term) ||
+          (normalizeCategory(i.category) || '').toLowerCase().includes(term)
+      );
+    }
+    return available.filter((i) => normalizeCategory(i.category) === activeCategory);
+  }, [menuItems, activeCategory, searchTerm]);
+
+  const counts = useMemo(() => {
+    const c = {};
+    for (const { key } of CATEGORY_LABELS) c[key] = 0;
+    for (const item of menuItems) {
+      if (item.available === false) continue;
+      const k = normalizeCategory(item.category);
+      if (c[k] !== undefined) c[k] += 1;
+    }
+    return c;
+  }, [menuItems]);
+
+  const firstNonEmptyCategory = useMemo(() => {
+    for (const { key } of CATEGORY_LABELS) {
+      if ((counts[key] || 0) > 0) return key;
+    }
+    return CATEGORY_LABELS[0]?.key || 'Kebab';
+  }, [counts]);
+
+  // When current category has no items (and not searching), switch to first non-empty category
+  useEffect(() => {
+    if (isSearching) return;
+    if (filteredItems.length === 0 && menuItems.filter((i) => i.available !== false).length > 0 && activeCategory !== firstNonEmptyCategory) {
+      setActiveCategory(firstNonEmptyCategory);
+    }
+  }, [isSearching, filteredItems.length, menuItems, activeCategory, firstNonEmptyCategory]);
 
   const handleAddToCart = (item) => {
-    addToCart(item);
+    addToCart({
+      ...item,
+      image: resolveMenuImage(item) || item.image || emojiForCategory(item.category),
+      price: Number(item.price ?? 0),
+    });
+
     const button = document.getElementById(`add-${item.id}`);
     if (button) {
       button.classList.add('animate-ping');
@@ -47,12 +152,21 @@ const MenuSection = () => {
 
   if (loading) {
     return (
-      <section id="menu" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="text-6xl mb-4">🍔</div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Loading Menu...</h2>
-          <div className="animate-pulse text-gray-600">
-            {backendStatus === 'checking' && 'Connecting to Spring Boot backend...'}
+      <section id="menu" className="py-20 persian-pattern-bg">
+        <div className="persian-corners max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="h-8 w-48 bg-mono-200 rounded animate-pulse mx-auto mb-6" />
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-mono-50 rounded-sm border border-mono-200 overflow-hidden">
+                <div className="bg-mono-200 h-48 animate-pulse" />
+                <div className="p-5">
+                  <div className="h-5 w-3/4 bg-mono-200 rounded animate-pulse mb-3" />
+                  <div className="h-4 w-full bg-mono-100 rounded animate-pulse mb-2" />
+                  <div className="h-4 w-2/3 bg-mono-100 rounded animate-pulse mb-4" />
+                  <div className="h-10 bg-mono-200 rounded animate-pulse" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -60,85 +174,109 @@ const MenuSection = () => {
   }
 
   return (
-    <section id="menu" className="py-20 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Backend Status Indicator */}
-        <div className={`text-center mb-6 p-3 rounded-lg ${
-          backendStatus === 'connected' 
-            ? 'bg-green-100 text-green-800 border border-green-200' 
-            : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-        }`}>
-          {backendStatus === 'connected' ? (
-            <span>✅ Connected to Spring Boot Backend</span>
-          ) : (
-            <span>⚠️ Using demo data - Backend not available</span>
-          )}
-        </div>
-
-        <div className="text-center mb-16">
-          <h2 className="text-5xl font-bold text-gray-900 mb-4">
-            Our <span className="text-primary-500">Menu</span>
+    <section id="menu" className="relative py-20 persian-pattern-bg">
+      <div className="persian-corners max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="persian-corner-bl" aria-hidden />
+        <div className="persian-corner-br" aria-hidden />
+        <div className="text-center mb-10">
+          <h2 className="font-display text-4xl md:text-5xl font-bold text-mono-900 mb-4 persian-section-title">
+            {t('menu.ourMenu')}
           </h2>
-          <p className="text-xl text-gray-600">
-            {backendStatus === 'connected' 
-              ? `Loaded ${menuItems.length} items from Spring Boot` 
-              : `Showing ${menuItems.length} demo items`
-            }
+          <span className="persian-title-band" aria-hidden />
+          <p className="text-mono-600 mt-6">
+            {t('menu.loadedItems', { count: menuItems.filter(i => i.available !== false).length })}
           </p>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-4 mb-12">
-          {categories.map(category => (
+        <div className="mb-6">
+          <input
+            type="search"
+            placeholder="Search menu..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full max-w-md mx-auto block px-4 py-2 border border-mono-200 rounded-sm focus:ring-2 focus:ring-mono-500 focus:border-mono-500"
+          />
+        </div>
+        <div className="flex flex-wrap justify-center gap-2 mb-12">
+          {CATEGORY_LABELS.map(({ key, label }) => (
             <button
-              key={category}
-              onClick={() => setActiveCategory(category)}
-              className={`px-6 py-3 rounded-full font-semibold transition-all transform hover:scale-105 ${
-                activeCategory === category
-                  ? 'bg-primary-500 text-white shadow-lg'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              key={key}
+              onClick={() => setActiveCategory(key)}
+              className={`px-4 py-2 rounded-sm text-sm font-medium transition-colors border ${
+                activeCategory === key
+                  ? 'bg-mono-800 text-mono-50 border-mono-800'
+                  : 'bg-mono-50 text-mono-700 border-mono-200 hover:border-mono-400 hover:bg-mono-100'
               }`}
             >
-              {category.charAt(0).toUpperCase() + category.slice(1)} 
-              <span className="ml-2 text-sm opacity-75">
-                ({menuItems.filter(item => item.category === category).length})
-              </span>
+              {label}
+              <span className="ml-1 opacity-75">({counts[key] || 0})</span>
             </button>
           ))}
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredItems.map(item => (
-            <div key={item.id} className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100">
-              <div className="relative">
-                <div className="bg-gradient-to-r from-primary-100 to-primary-200 rounded-t-2xl h-32 flex items-center justify-center text-6xl">
-                  {item.image}
-                </div>
-                {item.featured && (
-                  <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-                    POPULAR
-                  </div>
+        {isSearching && (
+          <p className="text-center text-mono-600 text-sm mb-6">
+            Showing {filteredItems.length} result{filteredItems.length !== 1 ? 's' : ''} from all categories
+          </p>
+        )}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredItems.map((item) => {
+            const imgSrc = resolveMenuImage(item) || item.image;
+            const showImg = imgSrc && (imgSrc.startsWith('/') || imgSrc.startsWith('http'));
+            return (
+            <div
+              key={item.id}
+              className="persian-card bg-mono-50 rounded-sm border border-mono-200 overflow-hidden hover:border-mono-400 hover:shadow-soft-lg transition-all duration-300 hover:-translate-y-1"
+            >
+              <div className="bg-mono-200 h-48 sm:h-52 flex items-center justify-center text-5xl overflow-hidden group">
+                {showImg ? (
+                  <img src={imgSrc} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                ) : (
+                  <span>{item.image || emojiForCategory(item.category)}</span>
                 )}
               </div>
-
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-xl font-bold text-gray-900">{item.name}</h3>
-                  <span className="text-2xl font-bold text-primary-600">${item.price}</span>
+              <div className="p-5">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-lg font-bold text-mono-900">{item.name}</h3>
+                  <span className="text-xl font-bold text-mono-800">${Number(item.price).toFixed(2)}</span>
                 </div>
-                
-                <p className="text-gray-600 mb-4 leading-relaxed">{item.description}</p>
-                
+                {isSearching && (
+                  <span className="inline-block text-xs px-2 py-0.5 rounded-sm bg-mono-200 text-mono-600 mb-2">
+                    {emojiForCategory(item.category)} {item.category}
+                  </span>
+                )}
+                <p className="text-mono-600 text-sm mb-3 leading-relaxed">
+                  {item.description || 'Freshly prepared.'}
+                </p>
+                {item.tags && (
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {item.tags.split(',').map((tag) => (
+                      <span key={tag} className="text-xs px-2 py-0.5 rounded-sm bg-mono-200 text-mono-700">
+                        {tag.trim()}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <button
                   id={`add-${item.id}`}
                   onClick={() => handleAddToCart(item)}
-                  className="w-full bg-primary-500 text-white py-3 rounded-xl font-semibold hover:bg-primary-600 transition-all transform hover:scale-105"
+                  className="w-full bg-mono-800 text-mono-50 py-2.5 rounded-sm font-medium hover:bg-mono-700 active:scale-[0.98] transition-all duration-200 text-sm"
                 >
-                  Add to Cart 🛒
+                  {t('menu.addToCart')}
                 </button>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
+
+        {filteredItems.length === 0 && (
+          <div className="text-center mt-10 text-mono-600">
+            {isSearching
+              ? `No menu items match "${searchTerm.trim()}". Try a different search.`
+              : t('menu.noItems')}
+          </div>
+        )}
       </div>
     </section>
   );

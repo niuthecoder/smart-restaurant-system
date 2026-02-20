@@ -1,5 +1,6 @@
 package com.example.restaurant.backend.Entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -12,10 +13,26 @@ public class MenuItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Tenant: which restaurant this item belongs to */
+    @Column(name = "restaurant_id")
+    private Long restaurantId;
+
     private String name; // e.g. "Margherita Pizza"
     private Double price; // e.g. 12.99
     private String category; // e.g. "Pizza", "Drink"
-    private boolean available; // true/false
+    private boolean available = true;
+
+    /** Comma-separated tags: Vegetarian, Gluten-free, Spicy, Vegan, etc. */
+    @Column(length = 255)
+    private String tags;
+
+    /** Image URL or path (e.g. /images/menu/joojeh-kebab.jpg or full URL). Null = use category emoji. */
+    @Column(length = 500)
+    private String image;
+
+    /** Short description of the dish (e.g. served hot, cold, ingredients). */
+    @Column(length = 500)
+    private String description;
 
     public MenuItem() {
     }
@@ -67,4 +84,13 @@ public class MenuItem {
     public void setAvailable(boolean available) {
         this.available = available;
     }
+
+    public Long getRestaurantId() { return restaurantId; }
+    public void setRestaurantId(Long restaurantId) { this.restaurantId = restaurantId; }
+    public String getTags() { return tags; }
+    public void setTags(String tags) { this.tags = tags; }
+    public String getImage() { return image; }
+    public void setImage(String image) { this.image = image; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 }

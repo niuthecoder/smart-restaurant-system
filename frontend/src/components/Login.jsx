@@ -1,9 +1,11 @@
 // src/components/Login.jsx
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { FiLogIn, FiUser, FiLock, FiCoffee } from 'react-icons/fi';
 
 const Login = () => {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -47,7 +49,7 @@ const Login = () => {
               <FiCoffee className="text-4xl text-primary-600" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Burger House Admin</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('nav.adminTitle')}</h1>
           <p className="text-gray-600 mt-2">Sign in to your account</p>
         </div>
 
@@ -118,6 +120,10 @@ const Login = () => {
                 </>
               )}
             </button>
+
+            <a href="#forgot-password" className="block text-center text-sm text-primary-600 hover:underline mt-2">
+              Forgot password?
+            </a>
           </form>
 
           {/* Demo Note */}

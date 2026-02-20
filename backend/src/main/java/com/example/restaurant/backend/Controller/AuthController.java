@@ -4,8 +4,11 @@ import com.example.restaurant.backend.DTO.AuthResponse;
 import com.example.restaurant.backend.DTO.LoginRequest;
 import com.example.restaurant.backend.Entity.User;
 import com.example.restaurant.backend.Repository.UserRepository;
+import com.example.restaurant.backend.Service.PasswordResetEmailService;
+import com.example.restaurant.backend.config.TenantContext;
 import com.example.restaurant.backend.config.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,8 +18,15 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.Valid;
 
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+
+import com.example.restaurant.backend.Repository.PasswordResetTokenRepository;
+import com.example.restaurant.backend.Entity.PasswordResetToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -24,6 +34,8 @@ import java.util.Optional;
 @Tag(name = "Authentication", description = "User authentication APIs")
 
 public class AuthController {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -33,105 +45,100 @@ public class AuthController {
 
     @Autowired
     private JwtUtil jwtUtil;
-    
-    @GetMapping("/test-password")
-    public ResponseEntity<String> testPassword() {
-        String rawPassword = "admin123";
-        String encoded = passwordEncoder.encode(rawPassword);
-        boolean matches = passwordEncoder.matches(rawPassword, encoded);
 
-        return ResponseEntity.ok("Raw: " + rawPassword +
-                " | Encoded: " + encoded +
-                " | Matches: " + matches);
-    }
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Autowired
+    private PasswordResetEmailService passwordResetEmailService;
+
+    @Value("${app.base-url:http://localhost:5173}")
+    private String baseUrl;
+
+    @Value("${app.security.create-default-users:true}")
+    private boolean createDefaultUsers;
 
     @PostConstruct
-    public void createDefaultAdmin() {
+    public void createDefaultAdminAndWaiter() {
+        if (!createDefaultUsers) {
+            log.info("Default user creation is disabled (app.security.create-default-users=false)");
+            return;
+        }
         try {
-            System.out.println("🔄 Checking for default admin user...");
-            long userCount = userRepository.count();
-            System.out.println("📊 Current user count: " + userCount);
-
-            if (userCount == 0) {
-                System.out.println("👤 Creating default admin user...");
-
+            if (userRepository.count() == 0) {
                 User admin = new User();
+                admin.setRestaurantId(TenantContext.DEFAULT_RESTAURANT_ID);
                 admin.setUsername("admin");
                 admin.setPassword(passwordEncoder.encode("admin123"));
                 admin.setEmail("admin@burgerhouse.com");
                 admin.setRole("ADMIN");
                 admin.setEnabled(true);
-
-                User savedUser = userRepository.save(admin);
-                System.out.println("✅ Default admin user created successfully!");
-                System.out.println("📝 User ID: " + savedUser.getId());
-                System.out.println("👤 Username: admin");
-                System.out.println("🔑 Password: admin123");
-                System.out.println("🎯 Role: ADMIN");
-            } else {
-                System.out.println("ℹ️ Users already exist in database");
-                // List all existing users
-                List<User> users = userRepository.findAll();
-                users.forEach(user -> {
-                    System.out.println("👤 Existing user: " + user.getUsername() +
-                            " (Role: " + user.getRole() + ", Enabled: " + user.isEnabled() + ")");
-                });
+                userRepository.save(admin);
+                log.info("Default admin user created. Change password after first login.");
+            }
+            if (userRepository.findByUsername("waiter").isEmpty()) {
+                User waiter = new User();
+                waiter.setRestaurantId(TenantContext.DEFAULT_RESTAURANT_ID);
+                waiter.setUsername("waiter");
+                waiter.setPassword(passwordEncoder.encode("waiter123"));
+                waiter.setEmail("waiter@burgerhouse.com");
+                waiter.setRole("WAITER");
+                waiter.setEnabled(true);
+                userRepository.save(waiter);
+                log.info("Default waiter user created (waiter / waiter123).");
             }
         } catch (Exception e) {
-            System.out.println("❌ Error creating default admin: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error creating default users: {}", e.getMessage());
         }
     }
-    
+
+    /** Create default waiter (only when app.security.create-default-users=true). */
+    @GetMapping("/create-waiter")
+    public ResponseEntity<String> createWaiter() {
+        if (!createDefaultUsers) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            if (userRepository.findByUsername("waiter").isPresent()) {
+                return ResponseEntity.ok("Waiter user already exists");
+            }
+            User waiter = new User();
+            waiter.setRestaurantId(TenantContext.DEFAULT_RESTAURANT_ID);
+            waiter.setUsername("waiter");
+            waiter.setPassword(passwordEncoder.encode("waiter123"));
+            waiter.setEmail("waiter@burgerhouse.com");
+            waiter.setRole("WAITER");
+            waiter.setEnabled(true);
+            userRepository.save(waiter);
+            return ResponseEntity.ok("Waiter user created successfully!");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+
     @Operation(summary = "User login", description = "Authenticate user and return JWT token")
     @ApiResponse(responseCode = "200", description = "Login successful")
     @ApiResponse(responseCode = "400", description = "Invalid credentials")
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
         try {
-            System.out.println("🔐 Login attempt received:");
-            System.out.println("Username: " + loginRequest.getUsername());
-            System.out.println("Password: " + loginRequest.getPassword());
-
             Optional<User> userOpt = userRepository.findByUsername(loginRequest.getUsername());
-
             if (userOpt.isEmpty()) {
-                System.out.println("❌ User not found: " + loginRequest.getUsername());
                 return ResponseEntity.badRequest().body(new AuthResponse(null, null, null, "Invalid credentials"));
             }
-
             User user = userOpt.get();
-            System.out.println("✅ User found: " + user.getUsername() + ", Role: " + user.getRole());
-
-            // Debug password matching
-            String rawPassword = loginRequest.getPassword();
-            String storedPassword = user.getPassword();
-            boolean passwordMatches = passwordEncoder.matches(rawPassword, storedPassword);
-
-            System.out.println("🔑 Password match: " + passwordMatches);
-            System.out.println("Raw input: " + rawPassword);
-            System.out.println("Stored hash: " + storedPassword);
-
-            if (!passwordMatches) {
-                System.out.println("❌ Password mismatch for user: " + user.getUsername());
+            if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
                 return ResponseEntity.badRequest().body(new AuthResponse(null, null, null, "Invalid credentials"));
             }
-
             if (!user.isEnabled()) {
-                System.out.println("❌ Account disabled for user: " + user.getUsername());
                 return ResponseEntity.badRequest().body(new AuthResponse(null, null, null, "Account disabled"));
             }
-
             String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
-            System.out.println("✅ Login successful, token generated for: " + user.getUsername());
-
             return ResponseEntity.ok(new AuthResponse(token, user.getUsername(), user.getRole(), "Login successful"));
-
         } catch (Exception e) {
-            System.out.println("💥 Exception during login: " + e.getMessage());
-            e.printStackTrace();
+            log.warn("Login failed: {}", e.getMessage());
             return ResponseEntity.badRequest()
-                    .body(new AuthResponse(null, null, null, "Login failed: " + e.getMessage()));
+                    .body(new AuthResponse(null, null, null, "Login failed"));
         }
     }
 
@@ -143,9 +150,10 @@ public class AuthController {
             }
 
             User user = new User();
+            user.setRestaurantId(TenantContext.DEFAULT_RESTAURANT_ID);
             user.setUsername(registerRequest.getUsername());
             user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
-            user.setRole("ADMIN"); // First user becomes admin
+            user.setRole("ADMIN");
             user.setEnabled(true);
 
             userRepository.save(user);
@@ -157,6 +165,45 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Registration failed");
         }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> body) {
+        String email = body != null ? body.get("email") : null;
+        if (email == null || email.isBlank())
+            return ResponseEntity.badRequest().body("Email required");
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty())
+            return ResponseEntity.ok(Map.of("message", "If that email exists, we sent a reset link."));
+        User user = userOpt.get();
+        passwordResetTokenRepository.deleteByUserId(user.getId());
+        String token = UUID.randomUUID().toString().replace("-", "");
+        PasswordResetToken prt = new PasswordResetToken();
+        prt.setUserId(user.getId());
+        prt.setToken(token);
+        prt.setExpiresAt(LocalDateTime.now().plusHours(1));
+        passwordResetTokenRepository.save(prt);
+        String resetLink = baseUrl + "/#reset-password?token=" + token;
+        passwordResetEmailService.sendResetEmail(user.getEmail(), resetLink);
+        return ResponseEntity.ok(Map.of("message", "If that email exists, we sent a reset link."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> body) {
+        String token = body != null ? body.get("token") : null;
+        String newPassword = body != null ? body.get("newPassword") : null;
+        if (token == null || newPassword == null || newPassword.length() < 6)
+            return ResponseEntity.badRequest().body("Token and new password (min 6 chars) required");
+        var prtOpt = passwordResetTokenRepository.findByTokenAndUsedFalseAndExpiresAtAfter(token, LocalDateTime.now());
+        if (prtOpt.isEmpty())
+            return ResponseEntity.badRequest().body("Invalid or expired token");
+        PasswordResetToken prt = prtOpt.get();
+        User user = userRepository.findById(prt.getUserId()).orElseThrow();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        prt.setUsed(true);
+        passwordResetTokenRepository.save(prt);
+        return ResponseEntity.ok(Map.of("message", "Password reset successful"));
     }
 
     @GetMapping("/validate")

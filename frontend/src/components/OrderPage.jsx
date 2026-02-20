@@ -1,24 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ordersAPI } from '../services/api';
 import { FiShoppingCart, FiPlus, FiMinus, FiTrash2, FiCreditCard, FiTruck } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
+import { resolveMenuImage } from '../data/menuImageMap';
+import toast from 'react-hot-toast';
+
+function getTableIdFromHash() {
+  const hash = window.location.hash || '';
+  const q = hash.indexOf('?');
+  if (q === -1) return null;
+  const params = new URLSearchParams(hash.slice(q));
+  const t = params.get('table');
+  const n = parseInt(t, 10);
+  return Number.isFinite(n) ? n : null;
+}
 
 const OrderPage = () => {
+  const { t } = useTranslation();
   const { cart, updateQuantity, removeFromCart, clearCart, getCartTotal, getCartCount } = useCart();
-  
+  const [tableFromUrl, setTableFromUrl] = useState(getTableIdFromHash);
+  useEffect(() => {
+    const onHash = () => setTableFromUrl(getTableIdFromHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     email: '',
     phone: '',
     address: '',
-    delivery: 'delivery'
+    notes: '',
+    delivery: tableFromUrl != null ? 'dine_in' : 'delivery'
   });
 
   const [currentStep, setCurrentStep] = useState(1);
 
   const getTax = () => getCartTotal() * 0.08;
-  const getDeliveryFee = () => customerInfo.delivery === 'delivery' ? 2.99 : 0;
+  const getDeliveryFee = () => (customerInfo.delivery === 'delivery' ? 2.99 : 0);
   const getGrandTotal = () => getCartTotal() + getTax() + getDeliveryFee();
+
+  const resolvedTableId = customerInfo.delivery === 'dine_in' ? tableFromUrl : null;
+  const orderTypeMap = { delivery: 'DELIVERY', pickup: 'PICKUP', dine_in: 'DINE_IN' };
 
   const handleInputChange = (e) => {
     setCustomerInfo({
@@ -27,59 +51,85 @@ const OrderPage = () => {
     });
   };
 
-  const handleSubmitOrder = async (e) => { // Added async here
-    e.preventDefault();
-    
-    if (cart.length === 0) {
-      alert('Your cart is empty! Add some items first.');
-      return;
+  const handleSubmitOrder = async (e) => {
+  e.preventDefault();
+
+  if (cart.length === 0) return toast.error('Your cart is empty!');
+
+  try {
+    const payload = {
+      tableId: resolvedTableId ?? null,
+      customerName: customerInfo.name.trim() || (resolvedTableId ? `Table ${resolvedTableId}` : 'Guest'),
+      customerPhone: customerInfo.phone?.trim() || null,
+      customerEmail: customerInfo.email?.trim() || null,
+      orderType: orderTypeMap[customerInfo.delivery] || 'PICKUP',
+      deliveryAddress: customerInfo.delivery === 'delivery' ? customerInfo.address.trim() : null,
+      notes: customerInfo.notes?.trim() || null,
+      items: cart.map((c) => ({
+        menuItemId: c.id,
+        menuItemName: c.name,
+        quantity: c.quantity || 1,
+      })),
+    };
+
+    console.log('✅ Order payload:', payload);
+
+    const result = await ordersAPI.createOrder(payload);
+
+    const estMin = customerInfo.delivery === 'dine_in' ? 15 : customerInfo.delivery === 'pickup' ? 20 : 35;
+    const estMax = customerInfo.delivery === 'dine_in' ? 25 : customerInfo.delivery === 'pickup' ? 30 : 45;
+    toast.success(`Order #${result.id} placed! Estimated ready in ${estMin}-${estMax} min.`, { duration: 6000 });
+    if (typeof window !== 'undefined') {
+      const recent = JSON.parse(localStorage.getItem('recentOrderIds') || '[]');
+      recent.unshift({ id: result.id, at: Date.now() });
+      localStorage.setItem('recentOrderIds', JSON.stringify(recent.slice(0, 10)));
+      window.location.hash = `order-status?id=${result.id}`;
     }
 
-    try {
-      // Prepare order data for backend
-      const orderData = {
-        customerInfo: customerInfo,
-        items: cart,
-        total: getGrandTotal(),
-        orderType: customerInfo.delivery,
-        orderDate: new Date().toISOString(),
-        status: 'pending'
-      };
-
-      console.log('📦 Submitting order to backend:', orderData);
-      
-      // Send to Spring Boot backend
-      const result = await ordersAPI.createOrder(orderData);
-      
-      alert(`🎉 Order placed successfully! Order ID: ${result.id}`);
-      
-      // Clear cart and reset form
-      clearCart();
-      setCurrentStep(1);
-      setCustomerInfo({
-        name: '', email: '', phone: '', address: '', delivery: 'delivery'
-      });
-      
-    } catch (error) {
-      console.error('❌ Order submission failed:', error);
-      alert('❌ Failed to place order. Please try again.');
-    }
-  }; // Fixed: Removed the duplicate code that was after this function
+    clearCart();
+    setCurrentStep(1);
+    setCustomerInfo({ name: '', email: '', phone: '', address: '', notes: '', delivery: tableFromUrl != null ? 'dine_in' : 'delivery' });
+  } catch (error) {
+    console.error('❌ Order failed:', error);
+    toast.error(error?.message || 'Failed to place order');
+  }
+};
 
   if (cart.length === 0 && currentStep === 1) {
+    const recentIds = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('recentOrderIds') || '[]');
+      } catch { return []; }
+    })();
     return (
       <section className="min-h-screen bg-gray-50 py-20">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <div className="text-6xl mb-4">🛒</div>
           <h2 className="text-4xl font-bold text-gray-900 mb-4">Your cart is empty</h2>
-          <p className="text-xl text-gray-600 mb-8">Add some delicious burgers to get started!</p>
+          <p className="text-xl text-gray-600 mb-8">{t('order.emptyPrompt')}</p>
           <a 
             href="#menu" 
             onClick={(e) => { e.preventDefault(); window.location.hash = 'menu'; }}
             className="bg-primary-500 text-white px-8 py-3 rounded-full font-semibold hover:bg-primary-600 transition-all"
           >
-            Browse Menu
+            {t('order.browseMenu')}
           </a>
+          {recentIds.length > 0 && (
+            <div className="mt-8 p-4 bg-white rounded-lg border border-gray-200 inline-block">
+              <p className="text-gray-600 mb-2">Track a recent order:</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {recentIds.slice(0, 5).map((r) => (
+                  <a
+                    key={r.id}
+                    href={`#order-status?id=${r.id}`}
+                    className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+                  >
+                    Order #{r.id}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
     );
@@ -126,7 +176,17 @@ const OrderPage = () => {
                   {cart.map(item => (
                     <div key={item.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
                       <div className="flex items-center space-x-4">
-                        <div className="text-3xl">{item.image}</div>
+                        <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center bg-gray-100 shrink-0">
+                          {(() => {
+                            const imgSrc = resolveMenuImage({ name: item.name, image: item.image }) || item.image;
+                            const showImg = imgSrc && (imgSrc.startsWith('/') || imgSrc.startsWith('http'));
+                            return showImg ? (
+                              <img src={imgSrc} alt={item.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-2xl">{item.image || '🍽️'}</span>
+                            );
+                          })()}
+                        </div>
                         <div>
                           <h3 className="font-semibold text-gray-900">{item.name}</h3>
                           <p className="text-primary-600 font-bold">${item.price}</p>
@@ -203,17 +263,28 @@ const OrderPage = () => {
                 <h2 className="text-3xl font-bold text-gray-900 mb-6">Delivery Information</h2>
                 
                 <form className="space-y-6">
-                  {/* Delivery Method */}
+                  {/* Order Type */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-4">Order Type</label>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <button
                         type="button"
-                        onClick={() => setCustomerInfo({...customerInfo, delivery: 'delivery'})}
+                        onClick={() => setCustomerInfo({ ...customerInfo, delivery: 'dine_in' })}
                         className={`p-4 rounded-2xl border-2 transition-all ${
-                          customerInfo.delivery === 'delivery' 
-                            ? 'border-primary-500 bg-primary-50' 
-                            : 'border-gray-200'
+                          customerInfo.delivery === 'dine_in' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'
+                        }`}
+                      >
+                        <span className="text-2xl mb-2 block">🍽️</span>
+                        <div className="font-semibold">Dine-in</div>
+                        <div className="text-sm text-gray-600">
+                          {tableFromUrl != null ? `Table ${tableFromUrl}` : 'At restaurant'}
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCustomerInfo({ ...customerInfo, delivery: 'delivery' })}
+                        className={`p-4 rounded-2xl border-2 transition-all ${
+                          customerInfo.delivery === 'delivery' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'
                         }`}
                       >
                         <FiTruck className="text-2xl mb-2 mx-auto" />
@@ -263,15 +334,27 @@ const OrderPage = () => {
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email <span className="text-primary-600 font-normal">(optional — receive order confirmation by email)</span>
+                      </label>
                       <input
                         type="email"
                         name="email"
                         value={customerInfo.email}
                         onChange={handleInputChange}
-                        required
                         className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        placeholder="john@example.com"
+                        placeholder="your@email.com"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Order notes (optional)</label>
+                      <textarea
+                        name="notes"
+                        value={customerInfo.notes}
+                        onChange={handleInputChange}
+                        rows={2}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        placeholder="Allergies, special requests..."
                       />
                     </div>
                     {customerInfo.delivery === 'delivery' && (
@@ -362,7 +445,7 @@ const OrderPage = () => {
                     <div className="flex items-center text-yellow-800">
                       <div className="text-lg mr-2">⚠️</div>
                       <div className="text-sm">
-                        <strong>Test Mode:</strong> This is a demo. No real payment will be processed.
+                        <strong>Test Mode:</strong> Your payment will be marked as accepted and your order will be sent to the restaurant's admin dashboard for processing. No real payment will be processed.
                       </div>
                     </div>
                   </div>
@@ -396,8 +479,16 @@ const OrderPage = () => {
               <div className="space-y-3 mb-4">
                 {cart.map(item => (
                   <div key={item.id} className="flex justify-between items-center text-sm">
-                    <div className="flex items-center">
-                      <span className="mr-2">{item.image}</span>
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const imgSrc = resolveMenuImage({ name: item.name, image: item.image }) || item.image;
+                        const showImg = imgSrc && (imgSrc.startsWith('/') || imgSrc.startsWith('http'));
+                        return showImg ? (
+                          <img src={imgSrc} alt="" className="w-6 h-6 rounded object-cover shrink-0" />
+                        ) : (
+                          <span className="text-sm">{item.image || '🍽️'}</span>
+                        );
+                      })()}
                       <span className="truncate max-w-[120px]">{item.name}</span>
                       <span className="text-gray-500 ml-1">x{item.quantity}</span>
                     </div>
@@ -430,7 +521,7 @@ const OrderPage = () => {
                 <div className="text-sm text-primary-700">
                   🕒 Estimated {customerInfo.delivery === 'delivery' ? 'delivery' : 'pickup'} time: 
                   <strong> 25-35 minutes</strong>
-                </div>
+                </div> 
               </div>
             </div>
           </div>
@@ -438,6 +529,6 @@ const OrderPage = () => {
       </div>
     </section>
   );
-}; // This closing brace was missing
+}; 
 
 export default OrderPage;

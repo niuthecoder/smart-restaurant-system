@@ -17,8 +17,8 @@ const AdminOrders = () => {
       
       // Use adminAPI instead of direct fetch
       const ordersData = await adminAPI.getOrders();
-      console.log('✅ Orders data received:', ordersData);
-      setOrders(ordersData);
+      const list = Array.isArray(ordersData) ? ordersData : (ordersData?.content ?? []);
+      setOrders(list);
     } catch (err) {
       console.error('❌ Error fetching orders:', err);
       setError('Failed to fetch orders. Please check your backend connection.');
@@ -44,7 +44,7 @@ const AdminOrders = () => {
   };
 
   const filteredOrders = orders.filter(order => 
-    filter === 'all' || order.status === filter
+    filter === 'all' || (order.status || '').toUpperCase() === filter
   );
 
   const getStatusColor = (status) => {
@@ -180,7 +180,7 @@ const AdminOrders = () => {
 
               {/* Action Buttons */}
               <div className="flex space-x-2 mt-4 lg:mt-0 flex-wrap">
-                {order.status === 'Pending' && (
+                {((order.status || '').toUpperCase() === 'PENDING') && (
                   <button
                     onClick={() => updateOrderStatus(order.id, 'PREPARING')}
                     className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
@@ -188,7 +188,7 @@ const AdminOrders = () => {
                     Start Preparing
                   </button>
                 )}
-                {order.status === 'PREPARING' && (
+                {((order.status || '').toUpperCase() === 'PREPARING') && (
                   <button
                     onClick={() => updateOrderStatus(order.id, 'READY')}
                     className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
@@ -196,7 +196,7 @@ const AdminOrders = () => {
                     Mark Ready
                   </button>
                 )}
-                {order.status === 'READY' && (
+                {((order.status || '').toUpperCase() === 'READY') && (
                   <button
                     onClick={() => updateOrderStatus(order.id, 'COMPLETED')}
                     className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"

@@ -24,6 +24,8 @@ public class JwtTokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
+        System.out.println("JWT FILTER HIT -> " + request.getMethod() + " " + request.getRequestURI());
+
         String token = getTokenFromRequest(request);
 
         if (token != null && jwtUtil.validateToken(token)) {
@@ -31,18 +33,34 @@ public class JwtTokenFilter extends OncePerRequestFilter {
             String role = jwtUtil.extractRole(token);
 
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                    username, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role)));
+                    username,
+                    null,
+                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role)));
+
+            System.out
+                    .println("JWT OK -> user=" + username + " role=" + role + " authorities=" + auth.getAuthorities());
+
             SecurityContextHolder.getContext().setAuthentication(auth);
+            TenantContext.setCurrentUsername(username);
+        } else {
+            System.out.println("JWT SKIP -> token " + (token == null ? "MISSING" : "INVALID"));
         }
 
-        filterChain.doFilter(request, response);
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            TenantContext.clear();
+        }
     }
 
     private String getTokenFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            
             return bearerToken.substring(7);
+            
         }
         return null;
+        
     }
 }

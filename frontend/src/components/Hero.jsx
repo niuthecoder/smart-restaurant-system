@@ -1,66 +1,72 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const Hero = () => {
+  const { t } = useTranslation();
   return (
-    <section id="home" className="relative bg-gradient-to-br from-primary-400 via-primary-500 to-secondary-500 min-h-screen flex items-center">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-black/10"></div>
-      
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        {/* Animated Badge */}
-        <div className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-6 py-2 mb-6 animate-pulse">
-          <span className="text-white font-semibold">🔥 Fresh & Delicious</span>
-        </div>
+    <section id="home" className="relative min-h-screen flex items-center overflow-hidden">
+      {/* Food imagery more prominent – lighter overlay for appetite appeal */}
+      <img
+        src="/images/menu/joje.png"
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover scale-105 blur-[1px] select-none pointer-events-none"
+        aria-hidden
+      />
+      <div className="absolute inset-0 bg-mono-900/45" />
 
-        {/* Main Heading */}
-        <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 animate-fade-in">
-          BURGER
-          <span className="block text-yellow-300">HOUSE</span>
+      {/* Persian corner frame */}
+      <div className="persian-corners absolute inset-0 pointer-events-none" aria-hidden>
+        <div className="absolute top-6 left-6 w-16 h-16 border-l-2 border-t-2 border-mono-400/40 rounded-tl-md" />
+        <div className="absolute top-6 right-6 w-16 h-16 border-r-2 border-t-2 border-mono-400/40 rounded-tr-md" />
+        <div className="absolute bottom-24 left-6 w-16 h-16 border-l-2 border-b-2 border-mono-400/40 rounded-bl-md" />
+        <div className="absolute bottom-24 right-6 w-16 h-16 border-r-2 border-b-2 border-mono-400/40 rounded-br-md" />
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+        <p className="text-mono-200/95 text-xs tracking-[0.3em] uppercase mb-8 animate-fade-in">
+          {t('hero.badge')}
+        </p>
+        <h1 className="font-display text-6xl md:text-8xl lg:text-9xl font-bold text-white mb-4 tracking-tight animate-fade-in">
+          {t('hero.title')}
+          <span className="block text-mono-200/95 mt-2 text-5xl md:text-7xl lg:text-8xl">{t('hero.titleHighlight')}</span>
         </h1>
-
-        {/* Subtitle */}
-        <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto leading-relaxed">
-          Crafting the most delicious burgers in town with premium ingredients and bold flavors that ignite your taste buds.
+        <p className="text-mono-200/90 text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed animate-fade-in animation-delay-150">
+          {t('hero.subtitle')}
         </p>
 
-        {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-slide-up">
-          <button onClick={() => window.location.hash = 'menu'}
-             className="bg-white text-primary-600 px-8 py-4 rounded-full font-bold text-lg hover:bg-gray-100 transition-all transform hover:scale-105 shadow-2xl"
-            >
-            🍔 ORDER NOW
-            </button>
-         <button 
-            onClick={() => window.location.hash = 'book-table'}
-            className="border-2 border-white text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-white/10 transition-all transform hover:scale-105"
-            >
-            📅 BOOK TABLE
+        {/* Unmissable CTAs – primary vs secondary hierarchy */}
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 justify-center items-center animate-slide-up animation-delay-200">
+          <button
+            onClick={() => (window.location.hash = 'menu')}
+            className="cta-primary w-full sm:w-auto bg-mono-100 text-mono-900 px-10 py-4 text-lg font-semibold rounded-sm hover:bg-white transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+          >
+            {t('hero.orderNow')}
+          </button>
+          <button
+            onClick={() => (window.location.hash = 'book-table')}
+            className="cta-secondary w-full sm:w-auto border-2 border-mono-200 text-mono-100 px-10 py-4 text-lg font-semibold rounded-sm hover:border-white hover:text-white hover:bg-white/10 transition-all duration-200"
+          >
+            {t('hero.bookTable')}
           </button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mt-16 text-white">
+        <div className="grid grid-cols-3 gap-8 max-w-md mx-auto mt-24 text-mono-200/90">
           <div>
-            <div className="text-3xl font-bold">50+</div>
-            <div className="text-white/80">Burger Varieties</div>
+            <div className="text-3xl font-bold text-white">50+</div>
+            <div className="text-sm mt-1">{t('hero.statsDishes')}</div>
           </div>
           <div>
-            <div className="text-3xl font-bold">15min</div>
-            <div className="text-white/80">Avg. Wait Time</div>
+            <div className="text-3xl font-bold text-white">15min</div>
+            <div className="text-sm mt-1">{t('hero.statsWait')}</div>
           </div>
           <div>
-            <div className="text-3xl font-bold">4.9★</div>
-            <div className="text-white/80">Customer Rating</div>
+            <div className="text-3xl font-bold text-white">4.9★</div>
+            <div className="text-sm mt-1">{t('hero.statsRating')}</div>
           </div>
         </div>
       </div>
 
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-        <div className="w-6 h-10 border-2 border-white rounded-full flex justify-center">
-          <div className="w-1 h-3 bg-white rounded-full mt-2"></div>
-        </div>
-      </div>
+      <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-mono-50 to-transparent pointer-events-none" />
     </section>
   );
 };
