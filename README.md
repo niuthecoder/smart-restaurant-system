@@ -215,7 +215,3 @@ npm run build
 ```
 
 ---
-
-## 👨‍💻 Developer
-
-Built with ❤️ using Spring Boot and PostgreSQL. *Full-stack portfolio project — 2025–2026.*
