@@ -13,8 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Basic rate limit for login: 15 attempts per minute per IP.
- * Returns 429 Too Many Requests when exceeded.
+ * Rate limit for auth endpoints: login, register, forgot-password, reset-password.
+ * 15 attempts per minute per IP. Returns 429 Too Many Requests when exceeded.
  */
 @Component
 @Order(1)
@@ -22,23 +22,41 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     private static final int MAX_REQUESTS_PER_MINUTE = 15;
     private static final long WINDOW_MS = 60_000;
+    private static final long CLEANUP_INTERVAL_MS = 300_000;
 
     private final ConcurrentHashMap<String, Window> perIp = new ConcurrentHashMap<>();
+    private volatile long lastCleanup = System.currentTimeMillis();
+
+    private static final java.util.Set<String> RATE_LIMITED_PATHS = java.util.Set.of(
+            "/api/auth/login",
+            "/api/auth/register",
+            "/api/auth/forgot-password",
+            "/api/auth/reset-password"
+    );
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        if (!"POST".equalsIgnoreCase(request.getMethod()) || !request.getRequestURI().endsWith("/api/auth/login")) {
+        if (!"POST".equalsIgnoreCase(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
         }
+
+        String uri = request.getRequestURI();
+        boolean limited = RATE_LIMITED_PATHS.stream().anyMatch(p -> uri != null && uri.endsWith(p));
+        if (!limited) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        cleanupStaleEntries();
 
         String key = clientKey(request);
         Window w = perIp.computeIfAbsent(key, k -> new Window());
         if (!w.allow()) {
             response.setStatus(429);
             response.setContentType("application/json");
-            response.getWriter().write("{\"error\":\"TOO_MANY_REQUESTS\",\"message\":\"Too many login attempts. Try again in a minute.\"}");
+            response.getWriter().write("{\"error\":\"TOO_MANY_REQUESTS\",\"message\":\"Too many attempts. Try again in a minute.\"}");
             return;
         }
         filterChain.doFilter(request, response);
@@ -50,6 +68,14 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
             return xff.split(",")[0].trim();
         }
         return request.getRemoteAddr();
+    }
+
+    private void cleanupStaleEntries() {
+        long now = System.currentTimeMillis();
+        if (now - lastCleanup > CLEANUP_INTERVAL_MS) {
+            lastCleanup = now;
+            perIp.entrySet().removeIf(e -> now - e.getValue().windowStart > WINDOW_MS * 5);
+        }
     }
 
     private static class Window {

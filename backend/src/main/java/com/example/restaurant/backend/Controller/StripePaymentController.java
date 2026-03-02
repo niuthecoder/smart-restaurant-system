@@ -3,15 +3,13 @@ package com.example.restaurant.backend.Controller;
 import com.example.restaurant.backend.Service.StripePaymentService;
 import com.example.restaurant.backend.config.TenantContext;
 import com.stripe.exception.StripeException;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-/**
- * Create Stripe PaymentIntent for an order. Requires auth (waiter/admin).
- * Frontend uses clientSecret with Stripe.js / Elements to collect payment.
- */
+@Tag(name = "Payments", description = "Stripe payment processing")
 @RestController
 @RequestMapping("/api/payments")
 public class StripePaymentController {

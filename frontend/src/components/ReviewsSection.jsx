@@ -69,12 +69,15 @@ const ReviewsSection = () => {
     : null;
 
   return (
-    <section id="reviews" className="py-20 bg-mono-50 dark:bg-mono-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="reviews" className="relative py-20 persian-pattern-bg dark:bg-mono-800">
+      <div className="persian-corners max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="persian-corner-bl" aria-hidden />
+        <div className="persian-corner-br" aria-hidden />
         <div className="text-center mb-12">
-          <h2 className="font-display text-4xl font-bold text-mono-900 dark:text-mono-100 mb-4">
-            {t('reviews?.title', 'Reviews & Ratings')}
+          <h2 className="font-display text-4xl md:text-5xl font-bold text-mono-900 dark:text-mono-100 mb-4 persian-section-title">
+            {t('reviews.title', 'Reviews & Ratings')}
           </h2>
+          <span className="persian-title-band" aria-hidden />
           {avgRating && (
             <div className="flex items-center justify-center gap-2 mb-2">
               <StarRating value={parseFloat(avgRating)} size="lg" />
@@ -88,7 +91,7 @@ const ReviewsSection = () => {
         <div className="grid lg:grid-cols-2 gap-12">
           <div>
             <h3 className="font-display text-xl font-bold text-mono-900 dark:text-mono-100 mb-4">
-              {t('reviews?.submitTitle', 'Leave a review')}
+              {t('reviews.submitTitle', 'Leave a review')}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -117,7 +120,7 @@ const ReviewsSection = () => {
                   value={form.customerName}
                   onChange={(e) => setForm((f) => ({ ...f, customerName: e.target.value }))}
                   placeholder="Your name"
-                  className="w-full px-4 py-2 border border-mono-200 dark:border-mono-600 rounded-lg bg-white dark:bg-mono-700 text-mono-900 dark:text-mono-100"
+                  className="w-full px-4 py-2 border border-mono-200 dark:border-mono-600 rounded-sm bg-white dark:bg-mono-700 text-mono-900 dark:text-mono-100"
                 />
               </div>
               <div>
@@ -129,13 +132,13 @@ const ReviewsSection = () => {
                   onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))}
                   placeholder="Share your experience..."
                   rows={3}
-                  className="w-full px-4 py-2 border border-mono-200 dark:border-mono-600 rounded-lg bg-white dark:bg-mono-700 text-mono-900 dark:text-mono-100"
+                  className="w-full px-4 py-2 border border-mono-200 dark:border-mono-600 rounded-sm bg-white dark:bg-mono-700 text-mono-900 dark:text-mono-100"
                 />
               </div>
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-6 py-2 bg-mono-800 dark:bg-mono-600 text-white rounded-lg font-medium hover:bg-mono-700 disabled:opacity-50"
+                className="px-6 py-2 bg-mono-800 dark:bg-mono-600 text-white rounded-sm font-medium hover:bg-mono-700 disabled:opacity-50"
               >
                 {submitting ? 'Submitting...' : 'Submit review'}
               </button>
@@ -144,12 +147,12 @@ const ReviewsSection = () => {
 
           <div>
             <h3 className="font-display text-xl font-bold text-mono-900 dark:text-mono-100 mb-4">
-              {t('reviews?.recentTitle', 'Recent reviews')}
+              {t('reviews.recentTitle', 'Recent reviews')}
             </h3>
             {loading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="p-4 rounded-lg border border-mono-200 dark:border-mono-600 animate-pulse">
+                  <div key={i} className="p-4 rounded-sm border border-mono-200 dark:border-mono-600 animate-pulse">
                     <div className="h-4 w-1/3 bg-mono-200 dark:bg-mono-600 rounded mb-2" />
                     <div className="h-3 w-full bg-mono-100 dark:bg-mono-700 rounded" />
                   </div>
@@ -162,7 +165,7 @@ const ReviewsSection = () => {
                 {reviews.map((r) => (
                   <div
                     key={r.id}
-                    className="p-4 rounded-lg border border-mono-200 dark:border-mono-600 bg-white dark:bg-mono-700"
+                    className="p-4 rounded-sm border border-mono-200 dark:border-mono-600 bg-white dark:bg-mono-700"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <StarRating value={r.rating} />

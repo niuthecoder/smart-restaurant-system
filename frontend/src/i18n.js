@@ -6,6 +6,7 @@ import ar from './locales/ar.json';
 import fa from './locales/fa.json';
 
 const LANG_KEY = 'app-lang';
+const RTL_LANGUAGES = ['ar', 'fa'];
 
 const resources = {
   en: { translation: en },
@@ -15,6 +16,13 @@ const resources = {
 };
 
 const savedLang = typeof localStorage !== 'undefined' ? localStorage.getItem(LANG_KEY) : null;
+
+function applyDirection(lng) {
+  const isRtl = RTL_LANGUAGES.includes(lng);
+  document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
+  document.documentElement.lang = lng;
+  document.documentElement.classList.toggle('rtl', isRtl);
+}
 
 i18n
   .use(initReactI18next)
@@ -28,9 +36,12 @@ i18n
   });
 
 i18n.on('languageChanged', (lng) => {
+  applyDirection(lng);
   try {
     localStorage.setItem(LANG_KEY, lng);
   } catch (_) {}
 });
+
+applyDirection(i18n.language);
 
 export default i18n;

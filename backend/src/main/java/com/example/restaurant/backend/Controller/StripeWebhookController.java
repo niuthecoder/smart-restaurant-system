@@ -47,7 +47,8 @@ public class StripeWebhookController {
                     stripePaymentService.markOrderPaid(orderId);
                     log.info("Order {} marked paid via Stripe webhook", orderId);
                 } catch (Exception e) {
-                    log.error("Failed to mark order paid: {}", e.getMessage());
+                    log.error("Failed to mark order {} paid: {}", intent.getMetadata().get("orderId"), e.getMessage());
+                    return ResponseEntity.internalServerError().body("Failed to process payment");
                 }
             }
         }

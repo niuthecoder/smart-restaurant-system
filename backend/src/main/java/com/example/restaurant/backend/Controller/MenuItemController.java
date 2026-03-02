@@ -4,6 +4,8 @@ import com.example.restaurant.backend.Entity.MenuItem;
 import com.example.restaurant.backend.Repository.MenuItemRepository;
 import com.example.restaurant.backend.config.TenantContext;
 import com.example.restaurant.backend.util.MenuCategoryUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +22,7 @@ final class MenuCategoryOrder {
     }
 }
 
+@Tag(name = "Menu", description = "Restaurant menu items")
 @RestController
 @RequestMapping("/api/menuitems")
 public class MenuItemController {
@@ -35,7 +38,7 @@ public class MenuItemController {
         return menuItemRepository.save(menuItem);
     }
 
-    // READ ALL (tenant-scoped). Returns items sorted by category (frontend order) then name so menu tabs show correct items.
+    @Operation(summary = "List all menu items", description = "Returns all available menu items sorted by category then name")
     @GetMapping
     public List<MenuItem> getAllMenuItems() {
         Long restaurantId = TenantContext.getCurrentRestaurantId();

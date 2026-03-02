@@ -34,13 +34,13 @@ const Footer = () => {
               {t('footer.taglineLong')}
             </p>
             <div className="flex gap-3">
-              <a href="#" className="w-9 h-9 rounded-sm bg-mono-800 flex items-center justify-center text-mono-300 hover:bg-mono-700 hover:text-mono-100 transition-colors">
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="w-9 h-9 rounded-sm bg-mono-800 flex items-center justify-center text-mono-300 hover:bg-mono-700 hover:text-mono-100 transition-colors">
                 <FiFacebook size={16} />
               </a>
-              <a href="#" className="w-9 h-9 rounded-sm bg-mono-800 flex items-center justify-center text-mono-300 hover:bg-mono-700 hover:text-mono-100 transition-colors">
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-9 h-9 rounded-sm bg-mono-800 flex items-center justify-center text-mono-300 hover:bg-mono-700 hover:text-mono-100 transition-colors">
                 <FiInstagram size={16} />
               </a>
-              <a href="#" className="w-9 h-9 rounded-sm bg-mono-800 flex items-center justify-center text-mono-300 hover:bg-mono-700 hover:text-mono-100 transition-colors">
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter" className="w-9 h-9 rounded-sm bg-mono-800 flex items-center justify-center text-mono-300 hover:bg-mono-700 hover:text-mono-100 transition-colors">
                 <FiTwitter size={16} />
               </a>
             </div>
@@ -79,12 +79,14 @@ const Footer = () => {
           <div>
             <h3 className="text-sm font-semibold text-mono-200 uppercase tracking-wider mb-4">{t('footer.newsletter')}</h3>
             <form onSubmit={handleSubscribe} className="space-y-3">
+              <label htmlFor="newsletter-email" className="sr-only">{t('footer.newsletter')}</label>
               <input
+                id="newsletter-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={t('footer.newsletterPlaceholder')}
-                className="w-full px-3 py-2.5 rounded-sm bg-mono-800 border border-mono-700 text-mono-100 placeholder-mono-500 focus:outline-none focus:border-mono-500 text-sm"
+                className="w-full px-3 py-2.5 rounded-sm bg-mono-800 border border-mono-700 text-mono-100 placeholder-mono-400 focus:outline-none focus:border-mono-500 text-sm"
                 required
               />
               <button
@@ -106,11 +108,11 @@ const Footer = () => {
       <div className="border-t border-mono-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-mono-500 text-xs">
-            <p>© {currentYear} {t('nav.brand')}. {t('footer.rights')} <FiHeart className="inline text-mono-500" /></p>
+            <p>© {currentYear} {t('nav.brand')}. {t('footer.rights')} {t('footer.developedBy') && <span className="mr-2">· {t('footer.developedBy')}</span>}<FiHeart className="inline text-mono-500" /></p>
             <div className="flex gap-6">
-              <a href="#" className="hover:text-mono-300 transition-colors">{t('footer.privacy')}</a>
-              <a href="#" className="hover:text-mono-300 transition-colors">{t('footer.terms')}</a>
-              <a href="#" className="hover:text-mono-300 transition-colors">{t('footer.cookies')}</a>
+              <span className="hover:text-mono-300 transition-colors cursor-default">{t('footer.privacy')}</span>
+              <span className="hover:text-mono-300 transition-colors cursor-default">{t('footer.terms')}</span>
+              <span className="hover:text-mono-300 transition-colors cursor-default">{t('footer.cookies')}</span>
             </div>
           </div>
         </div>

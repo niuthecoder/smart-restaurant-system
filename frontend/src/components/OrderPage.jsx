@@ -37,9 +37,12 @@ const OrderPage = () => {
 
   const [currentStep, setCurrentStep] = useState(1);
 
+  const [tipPercent, setTipPercent] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
   const getTax = () => getCartTotal() * 0.08;
   const getDeliveryFee = () => (customerInfo.delivery === 'delivery' ? 2.99 : 0);
-  const getGrandTotal = () => getCartTotal() + getTax() + getDeliveryFee();
+  const getTip = () => getCartTotal() * (tipPercent / 100);
+  const getGrandTotal = () => getCartTotal() + getTax() + getDeliveryFee() + getTip();
 
   const resolvedTableId = customerInfo.delivery === 'dine_in' ? tableFromUrl : null;
   const orderTypeMap = { delivery: 'DELIVERY', pickup: 'PICKUP', dine_in: 'DINE_IN' };
@@ -55,6 +58,8 @@ const OrderPage = () => {
   e.preventDefault();
 
   if (cart.length === 0) return toast.error('Your cart is empty!');
+  if (submitting) return;
+  setSubmitting(true);
 
   try {
     const payload = {
@@ -65,6 +70,7 @@ const OrderPage = () => {
       orderType: orderTypeMap[customerInfo.delivery] || 'PICKUP',
       deliveryAddress: customerInfo.delivery === 'delivery' ? customerInfo.address.trim() : null,
       notes: customerInfo.notes?.trim() || null,
+      tipAmount: getTip() > 0 ? parseFloat(getTip().toFixed(2)) : null,
       items: cart.map((c) => ({
         menuItemId: c.id,
         menuItemName: c.name,
@@ -92,6 +98,8 @@ const OrderPage = () => {
   } catch (error) {
     console.error('❌ Order failed:', error);
     toast.error(error?.message || 'Failed to place order');
+  } finally {
+    setSubmitting(false);
   }
 };
 
@@ -102,27 +110,27 @@ const OrderPage = () => {
       } catch { return []; }
     })();
     return (
-      <section className="min-h-screen bg-gray-50 py-20">
+      <section className="min-h-screen persian-pattern-bg py-20">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <div className="text-6xl mb-4">🛒</div>
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">Your cart is empty</h2>
-          <p className="text-xl text-gray-600 mb-8">{t('order.emptyPrompt')}</p>
+          <h2 className="font-display text-4xl font-bold text-mono-900 mb-4">Your cart is empty</h2>
+          <p className="text-lg text-mono-600 mb-8">{t('order.emptyPrompt')}</p>
           <a 
             href="#menu" 
             onClick={(e) => { e.preventDefault(); window.location.hash = 'menu'; }}
-            className="bg-primary-500 text-white px-8 py-3 rounded-full font-semibold hover:bg-primary-600 transition-all"
+            className="bg-mono-800 text-mono-50 px-8 py-3 rounded-sm font-semibold hover:bg-mono-700 transition-all"
           >
             {t('order.browseMenu')}
           </a>
           {recentIds.length > 0 && (
-            <div className="mt-8 p-4 bg-white rounded-lg border border-gray-200 inline-block">
-              <p className="text-gray-600 mb-2">Track a recent order:</p>
+            <div className="mt-8 p-4 bg-mono-50 rounded-sm border border-mono-200 inline-block">
+              <p className="text-mono-600 mb-2">Track a recent order:</p>
               <div className="flex flex-wrap justify-center gap-2">
                 {recentIds.slice(0, 5).map((r) => (
                   <a
                     key={r.id}
                     href={`#order-status?id=${r.id}`}
-                    className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+                    className="px-3 py-1 bg-mono-100 hover:bg-mono-200 rounded-sm text-sm"
                   >
                     Order #{r.id}
                   </a>
@@ -136,24 +144,26 @@ const OrderPage = () => {
   }
 
   return (
-    <section className="min-h-screen bg-gray-50 py-20">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="relative min-h-screen persian-pattern-bg py-20">
+      <div className="persian-corners max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="persian-corner-bl" aria-hidden />
+        <div className="persian-corner-br" aria-hidden />
         
         {/* Progress Steps */}
         <div className="flex justify-center mb-12">
-          <div className="flex items-center space-x-8">
+          <div className="flex items-center space-x-4 sm:space-x-8">
             {[1, 2, 3].map(step => (
               <div key={step} className="flex items-center">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold transition-all ${
+                <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-semibold text-sm sm:text-base transition-all ${
                   currentStep >= step 
-                    ? 'bg-primary-500 text-white shadow-lg' 
-                    : 'bg-gray-300 text-gray-600'
+                    ? 'bg-mono-800 text-mono-50 shadow-soft' 
+                    : 'bg-mono-200 text-mono-500'
                 }`}>
                   {step}
                 </div>
                 {step < 3 && (
-                  <div className={`w-16 h-1 mx-4 transition-all ${
-                    currentStep > step ? 'bg-primary-500' : 'bg-gray-300'
+                  <div className={`w-8 sm:w-16 h-0.5 mx-2 sm:mx-4 transition-all ${
+                    currentStep > step ? 'bg-mono-800' : 'bg-mono-200'
                   }`}></div>
                 )}
               </div>
@@ -165,58 +175,58 @@ const OrderPage = () => {
           {/* Left Column - Cart & Order Summary */}
           <div className="lg:col-span-2">
             {currentStep === 1 && (
-              <div className="bg-white rounded-3xl shadow-xl p-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center">
-                  <FiShoppingCart className="mr-3 text-primary-500" />
+              <div className="persian-card bg-mono-50 rounded-sm border border-mono-200 shadow-soft-lg p-6 sm:p-8">
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-mono-900 mb-6 flex items-center">
+                  <FiShoppingCart className="mr-3 text-mono-500" />
                   Your Order ({getCartCount()} items)
                 </h2>
 
                 {/* Cart Items */}
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {cart.map(item => (
-                    <div key={item.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center bg-gray-100 shrink-0">
+                    <div key={item.id} className="flex items-center justify-between p-3 sm:p-4 bg-mono-100 rounded-sm">
+                      <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-sm overflow-hidden flex items-center justify-center bg-mono-200 shrink-0">
                           {(() => {
                             const imgSrc = resolveMenuImage({ name: item.name, image: item.image }) || item.image;
                             const showImg = imgSrc && (imgSrc.startsWith('/') || imgSrc.startsWith('http'));
                             return showImg ? (
-                              <img src={imgSrc} alt={item.name} className="w-full h-full object-cover" />
+                              <img src={imgSrc} alt={item.name} loading="lazy" decoding="async" width={48} height={48} className="w-full h-full object-cover" />
                             ) : (
-                              <span className="text-2xl">{item.image || '🍽️'}</span>
+                              <span className="text-xl sm:text-2xl">{item.image || '🍽️'}</span>
                             );
                           })()}
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                          <p className="text-primary-600 font-bold">${item.price}</p>
+                        <div className="min-w-0">
+                          <h3 className="font-semibold text-mono-900 truncate">{item.name}</h3>
+                          <p className="text-mono-700 font-bold text-sm">${item.price}</p>
                           {item.isOffer && (
-                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Special Offer</span>
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-sm">Special Offer</span>
                           )}
                         </div>
                       </div>
                       
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
                         <button 
                           onClick={() => updateQuantity(item.id, -1)}
-                          className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-all"
+                          className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-mono-200 flex items-center justify-center hover:bg-mono-300 transition-all"
                         >
-                          <FiMinus size={14} />
+                          <FiMinus size={12} />
                         </button>
-                        <span className="font-semibold text-gray-900 min-w-[30px] text-center">
+                        <span className="font-semibold text-mono-900 min-w-[24px] text-center text-sm">
                           {item.quantity}
                         </span>
                         <button 
                           onClick={() => updateQuantity(item.id, 1)}
-                          className="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center hover:bg-primary-600 transition-all"
+                          className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-mono-800 text-mono-50 flex items-center justify-center hover:bg-mono-700 transition-all"
                         >
-                          <FiPlus size={14} />
+                          <FiPlus size={12} />
                         </button>
                         <button 
                           onClick={() => removeFromCart(item.id)}
-                          className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center hover:bg-red-200 transition-all ml-2"
+                          className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center hover:bg-red-200 transition-all"
                         >
-                          <FiTrash2 size={14} />
+                          <FiTrash2 size={12} />
                         </button>
                       </div>
                     </div>
@@ -224,8 +234,8 @@ const OrderPage = () => {
                 </div>
 
                 {/* Order Summary */}
-                <div className="mt-8 p-6 bg-gradient-to-r from-primary-50 to-primary-100 rounded-2xl">
-                  <h3 className="font-semibold text-gray-900 mb-4">Order Summary</h3>
+                <div className="mt-8 p-5 bg-mono-100 border border-mono-200 rounded-sm">
+                  <h3 className="font-semibold text-mono-900 mb-4">Order Summary</h3>
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Subtotal</span>
@@ -239,6 +249,12 @@ const OrderPage = () => {
                       <span>Delivery Fee</span>
                       <span>${getDeliveryFee().toFixed(2)}</span>
                     </div>
+                    {tipPercent > 0 && (
+                      <div className="flex justify-between text-green-700">
+                        <span>Tip ({tipPercent}%)</span>
+                        <span>${getTip().toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="border-t pt-2 mt-2">
                       <div className="flex justify-between font-bold text-lg">
                         <span>Total</span>
@@ -248,9 +264,29 @@ const OrderPage = () => {
                   </div>
                 </div>
 
+                <div className="mt-6 p-5 bg-mono-50 border border-mono-200 rounded-sm">
+                  <p className="text-sm font-medium text-mono-700 mb-3">Add a tip for the team</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {[0, 10, 15, 20, 25].map((pct) => (
+                      <button
+                        key={pct}
+                        type="button"
+                        onClick={() => setTipPercent(pct)}
+                        className={`px-4 py-2 rounded-sm text-sm font-semibold transition-all ${
+                          tipPercent === pct
+                            ? 'bg-mono-800 text-mono-50'
+                            : 'bg-mono-100 text-mono-700 hover:bg-mono-200'
+                        }`}
+                      >
+                        {pct === 0 ? 'No tip' : `${pct}%`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <button 
                   onClick={() => setCurrentStep(2)}
-                  className="w-full bg-primary-500 text-white py-4 rounded-xl font-semibold hover:bg-primary-600 transition-all transform hover:scale-105 mt-6"
+                  className="w-full bg-mono-800 text-mono-50 py-4 rounded-sm font-semibold hover:bg-mono-700 transition-all mt-6"
                 >
                   Continue to Checkout
                 </button>
@@ -259,50 +295,50 @@ const OrderPage = () => {
 
             {/* Customer Information Step */}
             {currentStep === 2 && (
-              <div className="bg-white rounded-3xl shadow-xl p-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">Delivery Information</h2>
+              <div className="persian-card bg-mono-50 rounded-sm border border-mono-200 shadow-soft-lg p-6 sm:p-8">
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-mono-900 mb-6">Delivery Information</h2>
                 
                 <form className="space-y-6">
                   {/* Order Type */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-4">Order Type</label>
+                    <label className="block text-sm font-medium text-mono-700 mb-4">Order Type</label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <button
                         type="button"
                         onClick={() => setCustomerInfo({ ...customerInfo, delivery: 'dine_in' })}
-                        className={`p-4 rounded-2xl border-2 transition-all ${
-                          customerInfo.delivery === 'dine_in' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'
+                        className={`p-4 rounded-sm border-2 transition-all ${
+                          customerInfo.delivery === 'dine_in' ? 'border-mono-800 bg-mono-100' : 'border-mono-200'
                         }`}
                       >
                         <span className="text-2xl mb-2 block">🍽️</span>
                         <div className="font-semibold">Dine-in</div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-mono-600">
                           {tableFromUrl != null ? `Table ${tableFromUrl}` : 'At restaurant'}
                         </div>
                       </button>
                       <button
                         type="button"
                         onClick={() => setCustomerInfo({ ...customerInfo, delivery: 'delivery' })}
-                        className={`p-4 rounded-2xl border-2 transition-all ${
-                          customerInfo.delivery === 'delivery' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'
+                        className={`p-4 rounded-sm border-2 transition-all ${
+                          customerInfo.delivery === 'delivery' ? 'border-mono-800 bg-mono-100' : 'border-mono-200'
                         }`}
                       >
                         <FiTruck className="text-2xl mb-2 mx-auto" />
                         <div className="font-semibold">Delivery</div>
-                        <div className="text-sm text-gray-600">$2.99 fee</div>
+                        <div className="text-sm text-mono-600">$2.99 fee</div>
                       </button>
                       <button
                         type="button"
                         onClick={() => setCustomerInfo({...customerInfo, delivery: 'pickup'})}
-                        className={`p-4 rounded-2xl border-2 transition-all ${
+                        className={`p-4 rounded-sm border-2 transition-all ${
                           customerInfo.delivery === 'pickup' 
-                            ? 'border-primary-500 bg-primary-50' 
-                            : 'border-gray-200'
+                            ? 'border-mono-800 bg-mono-100' 
+                            : 'border-mono-200'
                         }`}
                       >
                         <FiShoppingCart className="text-2xl mb-2 mx-auto" />
                         <div className="font-semibold">Pickup</div>
-                        <div className="text-sm text-gray-600">Free</div>
+                        <div className="text-sm text-mono-600">Free</div>
                       </button>
                     </div>
                   </div>
@@ -310,63 +346,63 @@ const OrderPage = () => {
                   {/* Customer Details */}
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                      <label className="block text-sm font-medium text-mono-700 mb-2">Full Name *</label>
                       <input
                         type="text"
                         name="name"
                         value={customerInfo.name}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                         placeholder="John Doe"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                      <label className="block text-sm font-medium text-mono-700 mb-2">Phone Number *</label>
                       <input
                         type="tel"
                         name="phone"
                         value={customerInfo.phone}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                         placeholder="(555) 123-4567"
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email <span className="text-primary-600 font-normal">(optional — receive order confirmation by email)</span>
+                      <label className="block text-sm font-medium text-mono-700 mb-2">
+                        Email <span className="text-mono-500 font-normal">(optional — receive order confirmation by email)</span>
                       </label>
                       <input
                         type="email"
                         name="email"
                         value={customerInfo.email}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                         placeholder="your@email.com"
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Order notes (optional)</label>
+                      <label className="block text-sm font-medium text-mono-700 mb-2">Order notes (optional)</label>
                       <textarea
                         name="notes"
                         value={customerInfo.notes}
                         onChange={handleInputChange}
                         rows={2}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                         placeholder="Allergies, special requests..."
                       />
                     </div>
                     {customerInfo.delivery === 'delivery' && (
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Address *</label>
+                        <label className="block text-sm font-medium text-mono-700 mb-2">Delivery Address *</label>
                         <input
                           type="text"
                           name="address"
                           value={customerInfo.address}
                           onChange={handleInputChange}
                           required
-                          className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                           placeholder="123 Main Street, City, State ZIP"
                         />
                       </div>
@@ -377,14 +413,19 @@ const OrderPage = () => {
                     <button 
                       type="button"
                       onClick={() => setCurrentStep(1)}
-                      className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                      className="flex-1 bg-mono-200 text-mono-700 py-4 rounded-sm font-semibold hover:bg-mono-300 transition-all"
                     >
                       Back to Cart
                     </button>
-                    <button 
+                    <button
                       type="button"
-                      onClick={() => setCurrentStep(3)}
-                      className="flex-1 bg-primary-500 text-white py-4 rounded-xl font-semibold hover:bg-primary-600 transition-all"
+                      onClick={() => {
+                        if (!customerInfo.name.trim()) return toast.error('Please enter your name.');
+                        if (!customerInfo.phone.trim()) return toast.error('Please enter your phone number.');
+                        if (customerInfo.delivery === 'delivery' && !customerInfo.address.trim()) return toast.error('Please enter a delivery address.');
+                        setCurrentStep(3);
+                      }}
+                      className="flex-1 bg-mono-800 text-mono-50 py-4 rounded-sm font-semibold hover:bg-mono-700 transition-all"
                     >
                       Continue to Payment
                     </button>
@@ -395,53 +436,53 @@ const OrderPage = () => {
 
             {/* Payment Step */}
             {currentStep === 3 && (
-              <div className="bg-white rounded-3xl shadow-xl p-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center">
-                  <FiCreditCard className="mr-3 text-primary-500" />
+              <div className="persian-card bg-mono-50 rounded-sm border border-mono-200 shadow-soft-lg p-6 sm:p-8">
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-mono-900 mb-6 flex items-center">
+                  <FiCreditCard className="mr-3 text-mono-500" />
                   Payment Information
                 </h2>
 
                 <form onSubmit={handleSubmitOrder} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Card Number *</label>
+                      <label className="block text-sm font-medium text-mono-700 mb-2">Card Number *</label>
                       <input
                         type="text"
                         placeholder="1234 5678 9012 3456"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Card Holder *</label>
+                      <label className="block text-sm font-medium text-mono-700 mb-2">Card Holder *</label>
                       <input
                         type="text"
                         placeholder="JOHN DOE"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date *</label>
+                      <label className="block text-sm font-medium text-mono-700 mb-2">Expiry Date *</label>
                       <input
                         type="text"
                         placeholder="MM/YY"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">CVV *</label>
+                      <label className="block text-sm font-medium text-mono-700 mb-2">CVV *</label>
                       <input
                         type="text"
                         placeholder="123"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                         required
                       />
                     </div>
                   </div>
 
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-sm p-4">
                     <div className="flex items-center text-yellow-800">
                       <div className="text-lg mr-2">⚠️</div>
                       <div className="text-sm">
@@ -454,15 +495,16 @@ const OrderPage = () => {
                     <button 
                       type="button"
                       onClick={() => setCurrentStep(2)}
-                      className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                      className="flex-1 bg-mono-200 text-mono-700 py-4 rounded-sm font-semibold hover:bg-mono-300 transition-all"
                     >
                       Back to Details
                     </button>
                     <button 
                       type="submit"
-                      className="flex-1 bg-green-500 text-white py-4 rounded-xl font-semibold hover:bg-green-600 transition-all transform hover:scale-105"
+                      disabled={submitting}
+                      className="flex-1 bg-mono-800 text-mono-50 py-4 rounded-sm font-semibold hover:bg-mono-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Place Order - ${getGrandTotal().toFixed(2)}
+                      {submitting ? 'Placing order...' : `Place Order - $${getGrandTotal().toFixed(2)}`}
                     </button>
                   </div>
                 </form>
@@ -472,8 +514,8 @@ const OrderPage = () => {
 
           {/* Right Column - Order Summary Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-3xl shadow-xl p-6 sticky top-6">
-              <h3 className="font-bold text-gray-900 mb-4 text-lg">Order Summary</h3>
+            <div className="persian-card bg-mono-50 rounded-sm border border-mono-200 shadow-soft p-6 sticky top-20">
+              <h3 className="font-bold text-mono-900 mb-4 text-lg">Order Summary</h3>
               
               {/* Cart Items Preview */}
               <div className="space-y-3 mb-4">
@@ -484,13 +526,13 @@ const OrderPage = () => {
                         const imgSrc = resolveMenuImage({ name: item.name, image: item.image }) || item.image;
                         const showImg = imgSrc && (imgSrc.startsWith('/') || imgSrc.startsWith('http'));
                         return showImg ? (
-                          <img src={imgSrc} alt="" className="w-6 h-6 rounded object-cover shrink-0" />
+                          <img src={imgSrc} alt="" loading="lazy" decoding="async" width={24} height={24} className="w-6 h-6 rounded object-cover shrink-0" />
                         ) : (
                           <span className="text-sm">{item.image || '🍽️'}</span>
                         );
                       })()}
                       <span className="truncate max-w-[120px]">{item.name}</span>
-                      <span className="text-gray-500 ml-1">x{item.quantity}</span>
+                      <span className="text-mono-500 ml-1">x{item.quantity}</span>
                     </div>
                     <span>${(item.price * item.quantity).toFixed(2)}</span>
                   </div>
@@ -510,6 +552,12 @@ const OrderPage = () => {
                   <span>Delivery</span>
                   <span>${getDeliveryFee().toFixed(2)}</span>
                 </div>
+                {tipPercent > 0 && (
+                  <div className="flex justify-between text-sm text-green-700">
+                    <span>Tip ({tipPercent}%)</span>
+                    <span>${getTip().toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold border-t pt-2">
                   <span>Total</span>
                   <span>${getGrandTotal().toFixed(2)}</span>
@@ -517,8 +565,8 @@ const OrderPage = () => {
               </div>
 
               {/* Estimated Time */}
-              <div className="mt-4 p-3 bg-primary-50 rounded-xl text-center">
-                <div className="text-sm text-primary-700">
+              <div className="mt-4 p-3 bg-mono-100 border border-mono-200 rounded-sm text-center">
+                <div className="text-sm text-mono-700">
                   🕒 Estimated {customerInfo.delivery === 'delivery' ? 'delivery' : 'pickup'} time: 
                   <strong> 25-35 minutes</strong>
                 </div> 

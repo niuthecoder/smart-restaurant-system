@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Rate limit for public write endpoints: POST /api/reservations, POST /orders.
+ * Rate limit for public write endpoints: reservations, orders, waitlist, reviews, loyalty, messages.
  * 30 requests per minute per IP to reduce abuse.
  */
 @Component
@@ -22,8 +22,19 @@ public class PublicRateLimitFilter extends OncePerRequestFilter {
 
     private static final int MAX_PER_MINUTE = 30;
     private static final long WINDOW_MS = 60_000;
+    private static final long CLEANUP_INTERVAL_MS = 300_000;
 
     private final ConcurrentHashMap<String, Window> perIp = new ConcurrentHashMap<>();
+    private volatile long lastCleanup = System.currentTimeMillis();
+
+    private static final java.util.Set<String> RATE_LIMITED_PATHS = java.util.Set.of(
+            "/api/reservations",
+            "/orders",
+            "/api/waitlist",
+            "/api/reviews",
+            "/api/loyalty/redeem",
+            "/api/messages"
+    );
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -33,11 +44,13 @@ public class PublicRateLimitFilter extends OncePerRequestFilter {
             return;
         }
         String uri = request.getRequestURI();
-        boolean limited = (uri != null && (uri.endsWith("/api/reservations") || uri.equals("/orders")));
+        boolean limited = RATE_LIMITED_PATHS.stream().anyMatch(p -> uri != null && uri.endsWith(p));
         if (!limited) {
             filterChain.doFilter(request, response);
             return;
         }
+
+        cleanupStaleEntries();
 
         String key = clientKey(request);
         Window w = perIp.computeIfAbsent(key, k -> new Window());
@@ -54,6 +67,14 @@ public class PublicRateLimitFilter extends OncePerRequestFilter {
         String xff = request.getHeader("X-Forwarded-For");
         if (xff != null && !xff.isBlank()) return xff.split(",")[0].trim();
         return request.getRemoteAddr();
+    }
+
+    private void cleanupStaleEntries() {
+        long now = System.currentTimeMillis();
+        if (now - lastCleanup > CLEANUP_INTERVAL_MS) {
+            lastCleanup = now;
+            perIp.entrySet().removeIf(e -> now - e.getValue().windowStart > WINDOW_MS * 5);
+        }
     }
 
     private static class Window {

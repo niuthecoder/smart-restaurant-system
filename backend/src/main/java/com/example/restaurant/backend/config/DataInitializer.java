@@ -4,6 +4,8 @@ import com.example.restaurant.backend.Entity.MenuItem;
 import com.example.restaurant.backend.Entity.Restaurant;
 import com.example.restaurant.backend.Repository.MenuItemRepository;
 import com.example.restaurant.backend.Repository.RestaurantRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +17,8 @@ import java.util.Set;
 
 @Configuration
 public class DataInitializer {
+
+    private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
 
     /** Canonical category values (match frontend tabs exactly). */
     private static final Set<String> CANONICAL_CATEGORY_VALUES = Set.of(
@@ -311,7 +315,7 @@ public class DataInitializer {
                 }
             }
             if (changed) {
-                System.out.println("[DataInitializer] Backfilled descriptions for menu items.");
+                log.info("Backfilled descriptions for menu items.");
             }
         };
     }
@@ -342,7 +346,7 @@ public class DataInitializer {
                 }
             }
             if (fixed > 0) {
-                System.out.println("[DataInitializer] Fixed category for " + fixed + " menu items.");
+                log.info("Fixed category for {} menu items.", fixed);
             }
         };
     }
@@ -389,7 +393,7 @@ public class DataInitializer {
                 menuItemRepository.save(m);
                 added++;
             }
-            if (added > 0) System.out.println("[DataInitializer] Added " + added + " appetizer(s) to menu.");
+            if (added > 0) log.info("Added {} appetizer(s) to menu.", added);
         };
     }
 
@@ -440,7 +444,7 @@ public class DataInitializer {
                 m.setDescription("Classic tomato, mozzarella, and fresh basil. Served hot.");
                 m.setImage("/images/menu/Margherita Pizza.png");
                 menuItemRepository.save(m);
-                System.out.println("[DataInitializer] Added Margherita Pizza to menu.");
+                log.info("Added Margherita Pizza to menu.");
             }
             if (!hasPepperoni) {
                 MenuItem m = new MenuItem("Pepperoni Pizza", 14.00, "Pizza", true);
@@ -448,7 +452,7 @@ public class DataInitializer {
                 m.setDescription("Spicy pepperoni with tomato and mozzarella. Served hot.");
                 m.setImage("/images/menu/Pepperoni Pizza.png");
                 menuItemRepository.save(m);
-                System.out.println("[DataInitializer] Added Pepperoni Pizza to menu.");
+                log.info("Added Pepperoni Pizza to menu.");
             }
         };
     }
@@ -465,7 +469,7 @@ public class DataInitializer {
                 menuItemRepository.delete(m);
             }
             if (!wines.isEmpty()) {
-                System.out.println("[DataInitializer] Removed " + wines.size() + " Wine item(s) from menu.");
+                log.info("Removed {} Wine item(s) from menu.", wines.size());
             }
         };
     }

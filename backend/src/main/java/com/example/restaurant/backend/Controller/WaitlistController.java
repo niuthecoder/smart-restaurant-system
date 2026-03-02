@@ -4,6 +4,8 @@ import com.example.restaurant.backend.Entity.WaitlistEntry;
 import com.example.restaurant.backend.Repository.WaitlistEntryRepository;
 import com.example.restaurant.backend.Service.WaitlistNotificationService;
 import com.example.restaurant.backend.config.TenantContext;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,9 +13,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "Waitlist", description = "Walk-in waitlist management")
 @RestController
 @RequestMapping("/api/waitlist")
-@CrossOrigin(origins = "*")
 public class WaitlistController {
 
     private final WaitlistEntryRepository repository;
@@ -24,18 +26,30 @@ public class WaitlistController {
         this.waitlistNotificationService = waitlistNotificationService;
     }
 
-    /** Public: join waitlist (name, phone, partySize). */
+    @Operation(summary = "Join the waitlist", description = "Public: add a guest to the waitlist with name, phone, and party size")
     @PostMapping
-    public ResponseEntity<WaitlistEntry> join(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> join(@RequestBody Map<String, Object> body) {
+        String guestName = body.get("guestName") instanceof String s ? s.trim() : "";
+        String guestPhone = body.get("guestPhone") instanceof String s ? s.trim() : "";
+        if (guestName.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Guest name is required"));
+        }
+        if (guestPhone.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Phone number is required"));
+        }
+        Object ps = body.get("partySize");
+        int partySize = ps != null ? ((Number) ps).intValue() : 1;
+        if (partySize < 1 || partySize > 20) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Party size must be between 1 and 20"));
+        }
         WaitlistEntry e = new WaitlistEntry();
         e.setRestaurantId(TenantContext.getCurrentRestaurantId());
-        e.setGuestName((String) body.get("guestName"));
-        e.setGuestPhone((String) body.get("guestPhone"));
-        e.setGuestEmail((String) body.get("guestEmail"));
-        Object ps = body.get("partySize");
-        e.setPartySize(ps != null ? ((Number) ps).intValue() : 1);
+        e.setGuestName(guestName);
+        e.setGuestPhone(guestPhone);
+        e.setGuestEmail(body.get("guestEmail") instanceof String s ? s.trim() : null);
+        e.setPartySize(partySize);
         e.setStatus("WAITING");
-        e.setNotes((String) body.get("notes"));
+        e.setNotes(body.get("notes") instanceof String s ? s.trim() : null);
         return ResponseEntity.ok(repository.save(e));
     }
 

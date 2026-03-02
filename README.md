@@ -9,7 +9,7 @@
 - **Full-stack:** React 19 + Vite 7 frontend, Spring Boot 3 REST API, PostgreSQL
 - **Auth & roles:** JWT-based auth with Admin, Waiter, and customer flows
 - **Payments:** Stripe integration (payment intents, webhooks, receipts)
-- **i18n:** Multi-language (EN / ES / FR) with react-i18next and persisted locale
+- **i18n:** Multi-language (EN / RU / AR / FA) with react-i18next and persisted locale
 - **Multi-tenant ready:** Restaurant-scoped data and tenant context
 - **UX:** Persian-themed UI (Tailwind), responsive layout, dropdown nav, cart and order flow
 - **Operations:** QR table links, API keys, audit log, data export (CSV), health check
@@ -40,7 +40,7 @@
 - Order confirmation and "order ready" emails (SendGrid)
 - Browser push notifications when order status becomes ready
 - Contact form and special offers section
-- Multi-language (EN / ES / FR) and theme toggle
+- Multi-language (EN / RU / AR / FA) and theme toggle
 
 **Staff & admin**
 
@@ -178,7 +178,9 @@ smart-restaurant-system/
 | Admin      | `GET /api/admin/dashboard/stats`, orders, reservations, audit log, API keys |
 | Payments   | `POST /api/payments/create-intent`, Stripe webhook |
 
-See `API_DOCUMENTATION.md` in the repo for details. **Interactive API docs (OpenAPI/Swagger):** when the backend is running, open **http://localhost:8080/swagger-ui.html**.
+See `API_REFERENCE.md` in the repo for details. **Interactive API docs (OpenAPI/Swagger):** when the backend is running, open **http://localhost:8080/swagger-ui.html**.
+
+**Security:** See [SECURITY.md](SECURITY.md) for JWT, CORS, and environment-variable best practices.
 
 ---
 
@@ -190,9 +192,23 @@ See `API_DOCUMENTATION.md` in the repo for details. **Interactive API docs (Open
 cd backend && mvn test
 ```
 
-Includes health check, auth, menu, order, and user-repository tests. The **place-order** flow is covered by an E2E-style test (`OrderControllerTest`).
+Includes health check, auth, menu, order, Actuator, and user-repository tests. The **place-order** flow is covered by an E2E-style test (`OrderControllerTest`).
 
-**CI:** GitHub Actions runs backend tests and frontend build on push/PR to `main`/`master`, then builds Docker images (see `.github/workflows/ci.yml`).
+**Frontend** (Vitest):
+
+```bash
+cd frontend && npm run test:run
+```
+
+Covers `CartContext` and utility functions.
+
+**CI:** GitHub Actions runs backend tests, frontend tests, and frontend build on push/PR to `main`/`master`, then builds Docker images (see `.github/workflows/ci.yml`).
+
+---
+
+## Deployment (Vercel + Fly.io)
+
+Deploy the frontend to **Vercel**, backend to **Fly.io**, and database to **Neon** (PostgreSQL). See **[DEPLOY.md](DEPLOY.md)** for step-by-step instructions. For **Render** backend, see [DEPLOY_CHECKLIST.md](DEPLOY_CHECKLIST.md).
 
 ---
 

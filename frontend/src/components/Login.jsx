@@ -11,10 +11,13 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { login, error, loading } = useAuth();
 
+  const isDev = import.meta.env.DEV;
+
   useEffect(() => {
-    // Pre-fill with demo credentials for testing
-    setUsername('admin');
-    setPassword('admin123');
+    if (isDev) {
+      setUsername('admin');
+      setPassword('admin123');
+    }
   }, []);
 
   const handleSubmit = async (e) => {
@@ -62,12 +65,13 @@ const Login = () => {
               </div>
             )}
 
-            {/* Demo Credentials Hint */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-blue-800 text-sm font-medium">Demo Credentials:</p>
-              <p className="text-blue-700 text-sm">Username: admin</p>
-              <p className="text-blue-700 text-sm">Password: admin123</p>
-            </div>
+            {isDev && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-800 text-sm font-medium">Demo Credentials:</p>
+                <p className="text-blue-700 text-sm">Username: admin</p>
+                <p className="text-blue-700 text-sm">Password: admin123</p>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -126,12 +130,13 @@ const Login = () => {
             </a>
           </form>
 
-          {/* Demo Note */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-600 text-center">
-              First time? The system will automatically create an admin account with these credentials.
-            </p>
-          </div>
+          {isDev && (
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-600 text-center">
+                First time? The system will automatically create an admin account with these credentials.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

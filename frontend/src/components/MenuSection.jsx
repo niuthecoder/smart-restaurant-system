@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCart } from '../context/CartContext';
 import { menuAPI } from '../services/api';
 import { getMockMenuItems } from '../data/mockData';
 import { resolveMenuImage } from '../data/menuImageMap';
+import { toMenuKey } from '../utils/menuTranslations';
 
 // Menu order: Appetizers → Soups → Salads → Mains (Kebab, Rice, Stew) → Drinks → Desserts → Other
 const CATEGORY_LABELS = [
@@ -44,6 +45,46 @@ const emojiForCategory = (cat) => {
     default: return '🍽️';
   }
 };
+
+const MenuCard = memo(({ item, slug, displayName, displayDesc, categoryLabel, imgSrc, showImg, isSearching, onAddToCart, addToCartLabel }) => (
+  <div
+    className="persian-card bg-mono-50 rounded-sm border border-mono-200 overflow-hidden hover:border-mono-400 hover:shadow-soft-lg transition-all duration-300 hover:-translate-y-1"
+  >
+    <div className="bg-mono-200 h-48 sm:h-52 flex items-center justify-center text-5xl overflow-hidden group">
+      {showImg ? (
+        <img src={imgSrc} alt={displayName} loading="lazy" decoding="async" width={400} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+      ) : (
+        <span>{item.image || emojiForCategory(item.category)}</span>
+      )}
+    </div>
+    <div className="p-5">
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="text-lg font-bold text-mono-900">{displayName}</h3>
+        <span className="text-xl font-bold text-mono-800">${Number(item.price).toFixed(2)}</span>
+      </div>
+      {isSearching && (
+        <span className="inline-block text-xs px-2 py-0.5 rounded-sm bg-mono-200 text-mono-600 mb-2">
+          {emojiForCategory(item.category)} {categoryLabel}
+        </span>
+      )}
+      <p className="text-mono-600 text-sm mb-3 leading-relaxed">{displayDesc}</p>
+      {item.tags && (
+        <div className="flex flex-wrap gap-1 mb-3">
+          {item.tags.split(',').map((tag) => (
+            <span key={tag} className="text-xs px-2 py-0.5 rounded-sm bg-mono-200 text-mono-700">{tag.trim()}</span>
+          ))}
+        </div>
+      )}
+      <button
+        id={`add-${item.id}`}
+        onClick={() => onAddToCart(item)}
+        className="w-full bg-mono-800 text-mono-50 py-2.5 rounded-sm font-medium hover:bg-mono-700 active:scale-[0.98] transition-all duration-200 text-sm"
+      >
+        {addToCartLabel}
+      </button>
+    </div>
+  </div>
+));
 
 const MenuSection = () => {
   const { t } = useTranslation();
@@ -136,7 +177,7 @@ const MenuSection = () => {
     }
   }, [isSearching, filteredItems.length, menuItems, activeCategory, firstNonEmptyCategory]);
 
-  const handleAddToCart = (item) => {
+  const handleAddToCart = useCallback((item) => {
     addToCart({
       ...item,
       image: resolveMenuImage(item) || item.image || emojiForCategory(item.category),
@@ -148,7 +189,7 @@ const MenuSection = () => {
       button.classList.add('animate-ping');
       setTimeout(() => button.classList.remove('animate-ping'), 300);
     }
-  };
+  }, [addToCart]);
 
   if (loading) {
     return (
@@ -189,9 +230,11 @@ const MenuSection = () => {
         </div>
 
         <div className="mb-6">
+          <label htmlFor="menu-search" className="sr-only">{t('menu.searchPlaceholder')}</label>
           <input
+            id="menu-search"
             type="search"
-            placeholder="Search menu..."
+            placeholder={t('menu.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full max-w-md mx-auto block px-4 py-2 border border-mono-200 rounded-sm focus:ring-2 focus:ring-mono-500 focus:border-mono-500"
@@ -208,7 +251,7 @@ const MenuSection = () => {
                   : 'bg-mono-50 text-mono-700 border-mono-200 hover:border-mono-400 hover:bg-mono-100'
               }`}
             >
-              {label}
+              {t(`menuCategories.${key}`, { defaultValue: label })}
               <span className="ml-1 opacity-75">({counts[key] || 0})</span>
             </button>
           ))}
@@ -216,64 +259,39 @@ const MenuSection = () => {
 
         {isSearching && (
           <p className="text-center text-mono-600 text-sm mb-6">
-            Showing {filteredItems.length} result{filteredItems.length !== 1 ? 's' : ''} from all categories
+            {t('menu.showingResults', { count: filteredItems.length })}
           </p>
         )}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item) => {
+            const slug = toMenuKey(item.name);
+            const displayName = t(`menuItems.${slug}.name`, { defaultValue: item.name });
+            const displayDesc = t(`menuItems.${slug}.description`, { defaultValue: item.description || 'Freshly prepared.' });
+            const categoryLabel = t(`menuCategories.${item.category}`, { defaultValue: item.category });
             const imgSrc = resolveMenuImage(item) || item.image;
             const showImg = imgSrc && (imgSrc.startsWith('/') || imgSrc.startsWith('http'));
             return (
-            <div
-              key={item.id}
-              className="persian-card bg-mono-50 rounded-sm border border-mono-200 overflow-hidden hover:border-mono-400 hover:shadow-soft-lg transition-all duration-300 hover:-translate-y-1"
-            >
-              <div className="bg-mono-200 h-48 sm:h-52 flex items-center justify-center text-5xl overflow-hidden group">
-                {showImg ? (
-                  <img src={imgSrc} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                ) : (
-                  <span>{item.image || emojiForCategory(item.category)}</span>
-                )}
-              </div>
-              <div className="p-5">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-lg font-bold text-mono-900">{item.name}</h3>
-                  <span className="text-xl font-bold text-mono-800">${Number(item.price).toFixed(2)}</span>
-                </div>
-                {isSearching && (
-                  <span className="inline-block text-xs px-2 py-0.5 rounded-sm bg-mono-200 text-mono-600 mb-2">
-                    {emojiForCategory(item.category)} {item.category}
-                  </span>
-                )}
-                <p className="text-mono-600 text-sm mb-3 leading-relaxed">
-                  {item.description || 'Freshly prepared.'}
-                </p>
-                {item.tags && (
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {item.tags.split(',').map((tag) => (
-                      <span key={tag} className="text-xs px-2 py-0.5 rounded-sm bg-mono-200 text-mono-700">
-                        {tag.trim()}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <button
-                  id={`add-${item.id}`}
-                  onClick={() => handleAddToCart(item)}
-                  className="w-full bg-mono-800 text-mono-50 py-2.5 rounded-sm font-medium hover:bg-mono-700 active:scale-[0.98] transition-all duration-200 text-sm"
-                >
-                  {t('menu.addToCart')}
-                </button>
-              </div>
-            </div>
-          );
+              <MenuCard
+                key={item.id}
+                item={item}
+                slug={slug}
+                displayName={displayName}
+                displayDesc={displayDesc}
+                categoryLabel={categoryLabel}
+                imgSrc={imgSrc}
+                showImg={showImg}
+                isSearching={isSearching}
+                onAddToCart={handleAddToCart}
+                addToCartLabel={t('menu.addToCart')}
+              />
+            );
           })}
         </div>
 
         {filteredItems.length === 0 && (
           <div className="text-center mt-10 text-mono-600">
             {isSearching
-              ? `No menu items match "${searchTerm.trim()}". Try a different search.`
+              ? t('menu.noMatch', { term: searchTerm.trim() })
               : t('menu.noItems')}
           </div>
         )}

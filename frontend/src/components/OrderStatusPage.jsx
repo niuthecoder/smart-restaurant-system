@@ -45,6 +45,7 @@ export default function OrderStatusPage() {
   }, []);
 
   const prevStatusRef = useRef(null);
+  const intervalRef = useRef(null);
   useEffect(() => {
     if (!orderId) {
       setLoading(false);
@@ -52,6 +53,7 @@ export default function OrderStatusPage() {
       setError('No order ID');
       return;
     }
+    prevStatusRef.current = null;
     requestNotificationPermission();
     let cancelled = false;
     const poll = async (isFirst) => {
@@ -60,21 +62,25 @@ export default function OrderStatusPage() {
         const o = await ordersAPI.getOrder(orderId);
         if (!cancelled) {
           setOrder(o);
+          setError(null);
           const status = (o?.status || '').toUpperCase();
           if ((status === 'READY' || status === 'COMPLETED') && prevStatusRef.current !== status) {
             if (prevStatusRef.current !== null) showOrderNotification(orderId, status);
             prevStatusRef.current = status;
           }
+          if (status === 'COMPLETED' || status === 'CANCELLED') {
+            if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+          }
         }
       } catch (e) {
-        if (!cancelled) setError(e?.message || 'Order not found');
+        if (!cancelled && !order) setError(e?.message || 'Order not found');
       } finally {
         if (!cancelled && isFirst) setLoading(false);
       }
     };
     poll(true);
-    const interval = setInterval(() => poll(false), 10000);
-    return () => { cancelled = true; clearInterval(interval); };
+    intervalRef.current = setInterval(() => poll(false), 10000);
+    return () => { cancelled = true; if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [orderId]);
 
   if (!orderId) {

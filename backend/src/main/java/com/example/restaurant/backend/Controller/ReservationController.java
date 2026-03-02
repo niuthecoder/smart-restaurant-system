@@ -1,10 +1,15 @@
 package com.example.restaurant.backend.Controller;
 
+import com.example.restaurant.backend.DTO.CreateReservationRequest;
 import com.example.restaurant.backend.DTO.ReservationByTimeDTO;
 import com.example.restaurant.backend.DTO.ReservationDetailDTO;
 import com.example.restaurant.backend.Entity.Reservation;
 import com.example.restaurant.backend.Repository.ReservationRepository;
 import com.example.restaurant.backend.Service.ReservationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -15,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Tag(name = "Reservations", description = "Table reservation management")
 @RestController
 @RequestMapping("/api/reservations")
 public class ReservationController {
@@ -25,8 +31,20 @@ public class ReservationController {
     @Autowired
     private ReservationService reservationService;
 
+    @Operation(summary = "Create a reservation", description = "Books a table for the given date/time and guest info. Validates overlap, past-time, and opening hours.")
+    @ApiResponse(responseCode = "200", description = "Reservation created with confirmation code")
+    @ApiResponse(responseCode = "400", description = "Validation error (missing fields or bad values)")
+    @ApiResponse(responseCode = "409", description = "Time-slot conflict or table already booked")
     @PostMapping
-    public Reservation createReservation(@RequestBody Reservation reservation) {
+    public Reservation createReservation(@Valid @RequestBody CreateReservationRequest req) {
+        Reservation reservation = new Reservation();
+        reservation.setTableId(req.getTableId());
+        reservation.setReservationTime(req.getReservationTime());
+        reservation.setGuestName(req.getGuestName());
+        reservation.setGuestPhone(req.getGuestPhone());
+        reservation.setGuestEmail(req.getGuestEmail());
+        reservation.setGuestCount(req.getGuestCount());
+        reservation.setSpecialRequests(req.getSpecialRequests());
         return reservationService.createReservation(reservation);
     }
 

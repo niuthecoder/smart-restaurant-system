@@ -1,5 +1,5 @@
 // src/context/AuthContext.jsx
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 
 const API_ORIGIN = import.meta.env.VITE_API_ORIGIN || 'http://localhost:8080';
 
@@ -116,14 +116,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('authToken'); 
     localStorage.removeItem('user');
     setAuthState({ isAuthenticated: false, user: null, token: null });
     setError('');
-  };
+  }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     user: authState.user,
     token: authState.token,
     isAuthenticated: authState.isAuthenticated,
@@ -133,7 +133,7 @@ export const AuthProvider = ({ children }) => {
     error,
     login,
     logout,
-  };
+  }), [authState, loading, error, login, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

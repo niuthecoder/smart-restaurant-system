@@ -14,6 +14,9 @@ import com.example.restaurant.backend.Service.ReceiptService;
 import com.example.restaurant.backend.Service.AuditService;
 import com.example.restaurant.backend.Service.OrderNotificationService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+@Tag(name = "Orders", description = "Customer order placement and tracking")
 @RestController
 @RequestMapping("/orders")
 public class OrderController {
@@ -55,6 +59,9 @@ public class OrderController {
         this.orderNotificationService = orderNotificationService;
     }
 
+    @Operation(summary = "Place a new order", description = "Creates an order with items, customer info, order type, and optional tip/notes")
+    @ApiResponse(responseCode = "200", description = "Order created successfully")
+    @ApiResponse(responseCode = "400", description = "Validation error or missing menu item")
     @PostMapping
     public ResponseEntity<?> create(@Valid @RequestBody CreateOrderRequest req) {
         if (req.getItems() == null || req.getItems().isEmpty()) {
@@ -131,7 +138,7 @@ public class OrderController {
         return ResponseEntity.ok(result);
     }
 
-    // GET SINGLE ORDER
+    @Operation(summary = "Get order by ID", description = "Retrieve a single order by its numeric ID")
     @GetMapping("/{id}")
     public ResponseEntity<RestaurantOrder> getOrderById(@PathVariable Long id) {
         return orderRepo.findById(id)

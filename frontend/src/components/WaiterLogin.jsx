@@ -18,17 +18,13 @@ const WaiterLogin = () => {
     setLoading(true);
     setError('');
 
-    try {
-      await login(credentials.username, credentials.password, 'waiter');
-      // Redirect to waiter dashboard after successful login
+    const result = await login(credentials.username, credentials.password, 'waiter');
+    if (result.success) {
       window.location.hash = 'waiter-dashboard';
-    } catch (err) {
-      const msg = err?.message || 'Invalid waiter credentials';
-      if (msg.includes('Access denied')) setError(msg);
-      else setError(`${msg} Use waiter / waiter123 if the waiter user is set up.`);
-    } finally {
-      setLoading(false);
+    } else {
+      setError(result.error || 'Invalid waiter credentials');
     }
+    setLoading(false);
   };
 
   const handleInputChange = (e) => {
@@ -124,12 +120,13 @@ const WaiterLogin = () => {
             </button>
           </form>
 
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-2xl text-sm text-blue-700">
-            <strong>Demo Credentials:</strong>
-            <div className="mt-1">Username: <code>waiter</code></div>
-            <div>Password: <code>waiter123</code></div>
-          </div>
+          {import.meta.env.DEV && (
+            <div className="mt-6 p-4 bg-blue-50 rounded-2xl text-sm text-blue-700">
+              <strong>Demo Credentials:</strong>
+              <div className="mt-1">Username: <code>waiter</code></div>
+              <div>Password: <code>waiter123</code></div>
+            </div>
+          )}
 
           {/* Back to Home */}
           <div className="mt-6 text-center">

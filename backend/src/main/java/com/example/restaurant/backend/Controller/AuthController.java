@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:3000")
 @Tag(name = "Authentication", description = "User authentication APIs")
 
 public class AuthController {
@@ -112,7 +111,8 @@ public class AuthController {
             userRepository.save(waiter);
             return ResponseEntity.ok("Waiter user created successfully!");
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+            log.error("Failed to create waiter user", e);
+            return ResponseEntity.badRequest().body("Failed to create waiter user. Please try again.");
         }
     }
 
@@ -153,7 +153,7 @@ public class AuthController {
             user.setRestaurantId(TenantContext.DEFAULT_RESTAURANT_ID);
             user.setUsername(registerRequest.getUsername());
             user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
-            user.setRole("ADMIN");
+            user.setRole("CUSTOMER");
             user.setEnabled(true);
 
             userRepository.save(user);
@@ -163,6 +163,7 @@ public class AuthController {
                     .ok(new AuthResponse(token, user.getUsername(), user.getRole(), "Registration successful"));
 
         } catch (Exception e) {
+            log.error("Registration failed", e);
             return ResponseEntity.badRequest().body("Registration failed");
         }
     }

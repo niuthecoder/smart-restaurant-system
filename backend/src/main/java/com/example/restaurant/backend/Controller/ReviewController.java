@@ -1,16 +1,19 @@
 package com.example.restaurant.backend.Controller;
 
+import com.example.restaurant.backend.DTO.CreateReviewRequest;
 import com.example.restaurant.backend.Entity.Review;
 import com.example.restaurant.backend.Repository.ReviewRepository;
 import com.example.restaurant.backend.Repository.RestaurantRepository;
-import com.example.restaurant.backend.config.TenantContext;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
+@Tag(name = "Reviews", description = "Customer reviews and ratings")
 @RestController
 @RequestMapping("/api/reviews")
 public class ReviewController {
@@ -23,6 +26,7 @@ public class ReviewController {
         this.restaurantRepository = restaurantRepository;
     }
 
+    @Operation(summary = "List reviews", description = "Paginated list of reviews sorted by newest first")
     @GetMapping
     public ResponseEntity<?> getReviews(
             @RequestParam(defaultValue = "0") int page,
@@ -36,25 +40,20 @@ public class ReviewController {
         return ResponseEntity.ok(result);
     }
 
+    @Operation(summary = "Submit a review", description = "Create a customer review with a 1-5 star rating")
+    @ApiResponse(responseCode = "200", description = "Review saved")
+    @ApiResponse(responseCode = "400", description = "Validation error (rating out of range, etc.)")
     @PostMapping
-    public ResponseEntity<?> createReview(@RequestBody Map<String, Object> body) {
-        Integer rating = body.get("rating") != null ? ((Number) body.get("rating")).intValue() : null;
-        if (rating == null || rating < 1 || rating > 5) {
-            return ResponseEntity.badRequest().body(Map.of("error", "rating must be 1–5"));
-        }
+    public ResponseEntity<?> createReview(@Valid @RequestBody CreateReviewRequest req) {
         Long restaurantId = restaurantRepository.findAll().stream().findFirst()
                 .map(r -> r.getId()).orElse(1L);
 
         Review review = new Review();
         review.setRestaurantId(restaurantId);
-        review.setRating(rating);
-        review.setComment(body.get("comment") != null ? body.get("comment").toString().trim() : null);
-        review.setCustomerName(body.get("customerName") != null ? body.get("customerName").toString().trim() : null);
-        if (body.get("orderId") != null) {
-            try {
-                review.setOrderId(((Number) body.get("orderId")).longValue());
-            } catch (Exception ignored) {}
-        }
+        review.setRating(req.getRating());
+        review.setComment(req.getComment() != null ? req.getComment().trim() : null);
+        review.setCustomerName(req.getCustomerName() != null ? req.getCustomerName().trim() : null);
+        review.setOrderId(req.getOrderId());
 
         Review saved = reviewRepository.save(review);
         return ResponseEntity.ok(saved);

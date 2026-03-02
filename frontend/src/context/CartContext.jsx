@@ -1,6 +1,18 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 
 const CartContext = createContext();
+const CART_KEY = 'cart';
+
+function loadCart() {
+  try {
+    const raw = localStorage.getItem(CART_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (_) {}
+  return [];
+}
 
 export const useCart = () => {
   const context = useContext(CartContext);
@@ -11,66 +23,62 @@ export const useCart = () => {
 };
 
 export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(loadCart);
 
-  const addToCart = (item) => {
+  useEffect(() => {
+    try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (_) {}
+  }, [cart]);
+
+  const addToCart = useCallback((item) => {
     setCart(prevCart => {
       const existingItem = prevCart.find(cartItem => cartItem.id === item.id);
-      
       if (existingItem) {
-        // If item exists, increase quantity
         return prevCart.map(cartItem =>
           cartItem.id === item.id
             ? { ...cartItem, quantity: cartItem.quantity + 1 }
             : cartItem
         );
-      } else {
-        // If item doesn't exist, add it with quantity 1
-        return [...prevCart, { ...item, quantity: 1 }];
       }
+      return [...prevCart, { ...item, quantity: 1 }];
     });
-  };
+  }, []);
 
-  const removeFromCart = (itemId) => {
+  const removeFromCart = useCallback((itemId) => {
     setCart(prevCart => prevCart.filter(item => item.id !== itemId));
-  };
+  }, []);
 
-  const updateQuantity = (itemId, change) => {
+  const updateQuantity = useCallback((itemId, change) => {
     setCart(prevCart =>
       prevCart.map(item => {
         if (item.id === itemId) {
           const newQuantity = item.quantity + change;
-          if (newQuantity <= 0) {
-            return item; // Don't remove, just prevent going below 1
-          }
+          if (newQuantity <= 0) return item;
           return { ...item, quantity: newQuantity };
         }
         return item;
       })
     );
-  };
+  }, []);
 
-  const clearCart = () => {
-    setCart([]);
-  };
+  const clearCart = useCallback(() => setCart([]), []);
 
-  const getCartCount = () => {
+  const getCartCount = useCallback(() => {
     return cart.reduce((total, item) => total + item.quantity, 0);
-  };
+  }, [cart]);
 
-  const getCartTotal = () => {
+  const getCartTotal = useCallback(() => {
     return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
-  };
+  }, [cart]);
 
-  const value = {
+  const value = useMemo(() => ({
     cart,
     addToCart,
     removeFromCart,
     updateQuantity,
     clearCart,
     getCartCount,
-    getCartTotal
-  };
+    getCartTotal,
+  }), [cart, addToCart, removeFromCart, updateQuantity, clearCart, getCartCount, getCartTotal]);
 
   return (
     <CartContext.Provider value={value}>

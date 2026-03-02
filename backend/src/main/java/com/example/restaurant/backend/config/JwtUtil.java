@@ -3,6 +3,8 @@ package com.example.restaurant.backend.config;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +15,7 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtUtil.class);
     private final SecretKey secretKey;
     private final long expirationMs;
 
@@ -56,7 +59,7 @@ public class JwtUtil {
             Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
             return true;
         } catch (Exception e) {
-            System.out.println("JWT VALIDATION FAILED: " + e.getMessage());
+            log.debug("JWT validation failed: {}", e.getMessage());
             return false;
         }
     }

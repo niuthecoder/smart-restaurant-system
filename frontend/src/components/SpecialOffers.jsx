@@ -43,8 +43,8 @@ const SpecialOffers = () => {
           {specialOffers.map((offer) => (
             <div key={offer.id} className="persian-card bg-mono-50 rounded-sm border border-mono-200 p-6 flex flex-col hover:border-mono-400 hover:shadow-soft-lg hover:-translate-y-1 transition-all duration-300 relative">
               <div className="text-3xl mb-3 text-center">{offer.image}</div>
-              <h3 className="text-lg font-bold text-mono-900 mb-2 text-center">{offer.title}</h3>
-              <p className="text-mono-600 text-sm mb-4 text-center flex-grow">{offer.description}</p>
+              <h3 className="text-lg font-bold text-mono-900 mb-2 text-center">{t(`specialOffers.${offer.id}.title`, { defaultValue: offer.title })}</h3>
+              <p className="text-mono-600 text-sm mb-4 text-center flex-grow">{t(`specialOffers.${offer.id}.description`, { defaultValue: offer.description })}</p>
               <div className="flex items-baseline justify-between gap-2 mb-4">
                 <span className="text-xl font-bold text-mono-900">${offer.price}</span>
                 <span className="text-mono-400 line-through text-sm">${offer.originalPrice}</span>

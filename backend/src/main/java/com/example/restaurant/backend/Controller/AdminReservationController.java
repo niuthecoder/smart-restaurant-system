@@ -4,6 +4,7 @@ import com.example.restaurant.backend.DTO.AdminReservationDTO;
 import com.example.restaurant.backend.Entity.Reservation;
 import com.example.restaurant.backend.Repository.ReservationRepository;
 import com.example.restaurant.backend.Service.ReservationService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,6 +12,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "Admin", description = "Admin reservation management")
 @RestController
 @RequestMapping("/api/admin")
 public class AdminReservationController {

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://smart-restaurant-system-cyan.vercel.app/sitemap.xml

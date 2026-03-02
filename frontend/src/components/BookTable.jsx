@@ -232,14 +232,17 @@ const BookTable = () => {
   };
 
   return (
-    <section id="book-table" className="min-h-screen bg-gray-50 py-20">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="book-table" className="relative min-h-screen persian-pattern-bg py-20">
+      <div className="persian-corners max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="persian-corner-bl" aria-hidden />
+        <div className="persian-corner-br" aria-hidden />
 
         <div className="text-center mb-12">
-          <h2 className="text-5xl font-bold text-gray-900 mb-4">
-            Book a <span className="text-primary-500">Table</span>
+          <h2 className="font-display text-4xl md:text-5xl font-bold text-mono-900 mb-4 persian-section-title">
+            Book a <span className="text-mono-500">Table</span>
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <span className="persian-title-band" aria-hidden />
+          <p className="text-lg text-mono-600 max-w-3xl mx-auto mt-6">
             Choose a salon and reserve one of our 30 tables (4 seats each)
           </p>
         </div>
@@ -247,8 +250,8 @@ const BookTable = () => {
         <div className="grid lg:grid-cols-2 gap-12">
 
           {/* Left: Table selection + form */}
-          <div className="bg-white rounded-3xl shadow-xl p-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">
+          <div className="persian-card bg-mono-50 rounded-sm border border-mono-200 shadow-soft-lg p-8">
+            <h3 className="font-display text-2xl font-bold text-mono-900 mb-6">
               {bookingStep === 1 ? 'Select Your Table' : 'Confirm Your Booking'}
             </h3>
 
@@ -259,8 +262,8 @@ const BookTable = () => {
                   key={s.key}
                   type="button"
                   onClick={() => handleSalonChange(s.key)}
-                  className={`p-3 rounded-xl border-2 text-sm font-semibold transition-all ${
-                    selectedSalon === s.key ? 'border-primary-500 bg-primary-50' : 'border-gray-200'
+                  className={`p-3 rounded-sm border-2 text-sm font-semibold transition-all ${
+                    selectedSalon === s.key ? 'border-mono-800 bg-mono-100' : 'border-mono-200'
                   }`}
                 >
                   <div>{s.label}</div>
@@ -271,9 +274,9 @@ const BookTable = () => {
             {bookingStep === 1 ? (
               <>
                 {tablesLoading ? (
-                  <div className="py-10 text-center text-gray-600">Loading tables...</div>
+                  <div className="py-10 text-center text-mono-600">Loading tables...</div>
                 ) : salonTables.length === 0 ? (
-                  <div className="py-10 text-center text-amber-700 bg-amber-50 rounded-xl border border-amber-200">
+                  <div className="py-10 text-center text-amber-700 bg-amber-50 rounded-sm border border-amber-200">
                     No tables available. Make sure the backend is running (e.g. Docker or <code className="text-sm">mvn spring-boot:run</code>) and the app is using the correct API URL.
                   </div>
                 ) : (
@@ -289,12 +292,12 @@ const BookTable = () => {
                             type="button"
                             disabled={isReserved}
                             onClick={() => !isReserved && handleTableSelect(table)}
-                            className={`h-14 rounded-xl border-2 font-bold transition-all ${
+                            className={`h-14 rounded-sm border-2 font-bold transition-all ${
                               isReserved
-                                ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                                ? 'border-mono-200 bg-mono-100 text-mono-400 cursor-not-allowed'
                                 : selectedTable?.id === table.id
-                                  ? 'border-green-500 bg-green-50'
-                                  : 'border-gray-200 bg-white hover:border-primary-300'
+                                  ? 'border-green-600 bg-green-50'
+                                  : 'border-mono-200 bg-mono-50 hover:border-mono-400'
                             }`}
                             title={
                               isReserved
@@ -309,15 +312,15 @@ const BookTable = () => {
                     </div>
 
                     {/* Salon info */}
-                    <div className="mb-6 p-4 rounded-2xl bg-gray-50 border">
-                      <div className="text-sm text-gray-700">
+                    <div className="mb-6 p-4 rounded-sm bg-mono-100 border border-mono-200">
+                      <div className="text-sm text-mono-700">
                         <strong>Rules:</strong>{' '}
                         {selectedSalon === 'SALON_1'
                           ? 'Non-Smoking only.'
                           : 'Smoking is allowed in this salon.'}
                       </div>
-                      <div className="text-sm text-gray-600 mt-1">All tables are 4 seats.</div>
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-sm text-mono-600 mt-1">All tables are 4 seats.</div>
+                      <div className="text-xs text-mono-500 mt-1">
                         Tip: pick date & time first to see booked tables disabled.
                       </div>
                     </div>
@@ -325,7 +328,7 @@ const BookTable = () => {
                     {/* Date/Time quick pick (optional but useful) */}
                     <div className="grid md:grid-cols-2 gap-4 mb-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-mono-700 mb-2">
                           <FiCalendar className="inline mr-2" />
                           Date *
                         </label>
@@ -335,11 +338,11 @@ const BookTable = () => {
                           value={bookingInfo.date}
                           onChange={handleInputChange}
                           min={new Date().toISOString().split('T')[0]}
-                          className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-mono-700 mb-2">
                           <FiClock className="inline mr-2" />
                           Time *
                         </label>
@@ -347,7 +350,7 @@ const BookTable = () => {
                           name="time"
                           value={bookingInfo.time}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                         >
                           <option value="">Select time</option>
                           {timeSlots.map(slot => (
@@ -360,10 +363,10 @@ const BookTable = () => {
                     <button
                       onClick={() => selectedTable && setBookingStep(2)}
                       disabled={!selectedTable}
-                      className={`w-full py-4 rounded-xl font-semibold transition-all transform ${
+                      className={`w-full py-4 rounded-sm font-semibold transition-all ${
                         selectedTable
-                          ? 'bg-primary-500 text-white hover:bg-primary-600 hover:scale-105'
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          ? 'bg-mono-800 text-mono-50 hover:bg-mono-700'
+                          : 'bg-mono-200 text-mono-400 cursor-not-allowed'
                       }`}
                     >
                       {selectedTable ? `Book Table ${selectedTable.number}` : 'Select a Table to Continue'}
@@ -373,11 +376,11 @@ const BookTable = () => {
               </>
             ) : (
               <form onSubmit={handleBookTable} className="space-y-6">
-                <div className="bg-gradient-to-r from-primary-50 to-primary-100 rounded-2xl p-4">
+                <div className="bg-mono-100 border border-mono-200 rounded-sm p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-semibold text-gray-900">Selected Table</h4>
-                      <p className="text-sm text-gray-600">
+                      <h4 className="font-semibold text-mono-900">Selected Table</h4>
+                      <p className="text-sm text-mono-600">
                         Table {selectedTable?.number} • 4 seats • {selectedSalon}
                         {' • '}
                         {selectedTable?.smokingAllowed ? 'Smoking Allowed' : 'Non-Smoking'}
@@ -386,7 +389,7 @@ const BookTable = () => {
                     <button
                       type="button"
                       onClick={() => setBookingStep(1)}
-                      className="text-primary-600 hover:text-primary-700 text-sm font-semibold"
+                      className="text-mono-600 hover:text-mono-800 text-sm font-semibold"
                     >
                       Change
                     </button>
@@ -395,7 +398,7 @@ const BookTable = () => {
 
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-mono-700 mb-2">
                       <FiCalendar className="inline mr-2" />
                       Date *
                     </label>
@@ -406,11 +409,11 @@ const BookTable = () => {
                       onChange={handleInputChange}
                       required
                       min={new Date().toISOString().split('T')[0]}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-mono-700 mb-2">
                       <FiClock className="inline mr-2" />
                       Time *
                     </label>
@@ -419,7 +422,7 @@ const BookTable = () => {
                       value={bookingInfo.time}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                     >
                       <option value="">Select time</option>
                       {timeSlots.map(slot => (
@@ -430,7 +433,7 @@ const BookTable = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-mono-700 mb-2">
                     <FiUsers className="inline mr-2" />
                     Guests * (Max: 4)
                   </label>
@@ -439,7 +442,7 @@ const BookTable = () => {
                     value={bookingInfo.guests}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                   >
                     {[1,2,3,4].map(n => (
                       <option key={n} value={n}>{n} {n === 1 ? 'guest' : 'guests'}</option>
@@ -449,67 +452,67 @@ const BookTable = () => {
 
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                    <label className="block text-sm font-medium text-mono-700 mb-2">Full Name *</label>
                     <input
                       type="text"
                       name="name"
                       value={bookingInfo.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
+                    <label className="block text-sm font-medium text-mono-700 mb-2">Phone *</label>
                     <input
                       type="tel"
                       name="phone"
                       value={bookingInfo.phone}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                    <label className="block text-sm font-medium text-mono-700 mb-2">Email *</label>
                     <input
                       type="email"
                       name="email"
                       value={bookingInfo.email}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
+                  <label className="block text-sm font-medium text-mono-700 mb-2">Special Requests</label>
                   <textarea
                     name="specialRequests"
                     value={bookingInfo.specialRequests}
                     onChange={handleInputChange}
                     rows="3"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-3 rounded-sm border border-mono-200 focus:outline-none focus:border-mono-500"
                     placeholder="Birthday, allergies, wheelchair access, etc."
                   />
                 </div>
 
                 <div className="flex space-x-4">
-                  <button
-                    type="button"
-                    onClick={() => setBookingStep(1)}
-                    className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-300 transition-all"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className={`flex-1 bg-green-500 text-white py-4 rounded-xl font-semibold transition-all transform ${
-                      submitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-green-600 hover:scale-105'
-                    }`}
-                  >
+                    <button
+                      type="button"
+                      onClick={() => setBookingStep(1)}
+                      className="flex-1 bg-mono-200 text-mono-700 py-4 rounded-sm font-semibold hover:bg-mono-300 transition-all"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className={`flex-1 bg-mono-800 text-mono-50 py-4 rounded-sm font-semibold transition-all ${
+                        submitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-mono-700'
+                      }`}
+                    >
                     {submitting ? 'Booking...' : 'Confirm Booking'}
                   </button>
                 </div>
@@ -519,8 +522,8 @@ const BookTable = () => {
 
           {/* Right column (keep yours / you can expand later) */}
           <div className="space-y-6">
-            <div className="bg-white rounded-3xl shadow-xl p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Why Book With Us?</h3>
+            <div className="persian-card bg-mono-50 rounded-sm border border-mono-200 shadow-soft p-6">
+              <h3 className="font-display text-xl font-bold text-mono-900 mb-4">Why Book With Us?</h3>
               <div className="space-y-4">
                 <div className="flex items-center">
                   <FiCheck className="text-green-500 mr-3" />
@@ -537,7 +540,7 @@ const BookTable = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-primary-500 to-secondary-500 rounded-3xl shadow-xl p-6 text-white">
+            <div className="bg-mono-800 rounded-sm shadow-soft p-6 text-mono-100">
               <h3 className="text-xl font-bold mb-4">Need Help?</h3>
               <p className="mb-4">Our team is happy to assist:</p>
               <div className="space-y-2">

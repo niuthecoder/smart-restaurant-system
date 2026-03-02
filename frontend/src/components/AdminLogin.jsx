@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FiLock, FiUser, FiArrowRight } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
 
 const AdminLogin = ({ onLogin }) => {
   const [credentials, setCredentials] = useState({
@@ -7,16 +8,24 @@ const AdminLogin = ({ onLogin }) => {
     password: ''
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Simple authentication (in real app, this would call your backend)
-    if (credentials.username === 'admin' && credentials.password === 'admin123') {
-      onLogin(true);
-      localStorage.setItem('adminAuthenticated', 'true');
-    } else {
-      setError('Invalid credentials. Use: admin / admin123');
+    setLoading(true);
+    setError('');
+    try {
+      const result = await login(credentials.username, credentials.password);
+      if (result.success) {
+        onLogin(true);
+      } else {
+        setError('Invalid credentials.');
+      }
+    } catch {
+      setError('Invalid credentials.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -83,17 +92,20 @@ const AdminLogin = ({ onLogin }) => {
 
           <button
             type="submit"
-            className="w-full bg-primary-500 text-white py-3 rounded-xl font-semibold hover:bg-primary-600 transition-all transform hover:scale-105 flex items-center justify-center"
+            disabled={loading}
+            className="w-full bg-primary-500 text-white py-3 rounded-xl font-semibold hover:bg-primary-600 transition-all transform hover:scale-105 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Sign In <FiArrowRight className="ml-2" />
+            {loading ? 'Signing in...' : <>Sign In <FiArrowRight className="ml-2" /></>}
           </button>
         </form>
 
-        <div className="mt-6 p-4 bg-yellow-50 rounded-xl text-sm text-yellow-800">
-          <strong>Demo Credentials:</strong><br />
-          Username: <code>admin</code><br />
-          Password: <code>admin123</code>
-        </div>
+        {import.meta.env.DEV && (
+          <div className="mt-6 p-4 bg-yellow-50 rounded-xl text-sm text-yellow-800">
+            <strong>Demo Credentials:</strong><br />
+            Username: <code>admin</code><br />
+            Password: <code>admin123</code>
+          </div>
+        )}
       </div>
     </div>
   );

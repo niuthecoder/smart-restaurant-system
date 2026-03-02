@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { settingsAPI } from '../services/api';
 
 const BrandingContext = createContext({
@@ -37,8 +37,10 @@ export function BrandingProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
+  const value = useMemo(() => ({ ...branding, loading }), [branding, loading]);
+
   return (
-    <BrandingContext.Provider value={{ ...branding, loading }}>
+    <BrandingContext.Provider value={value}>
       {children}
     </BrandingContext.Provider>
   );

@@ -69,16 +69,20 @@ const Contact = () => {
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
+          <label htmlFor="contact-name" className="sr-only">{t('contact.namePlaceholder')}</label>
           <input
-            className="w-full border border-mono-200 rounded-sm p-3 bg-mono-50 text-mono-900 placeholder-mono-400 focus:outline-none focus:border-mono-500"
+            id="contact-name"
+            className="w-full border border-mono-200 rounded-sm p-3 bg-mono-50 text-mono-900 placeholder-mono-600 focus:outline-none focus:border-mono-500"
             name="name"
             placeholder={t('contact.namePlaceholder')}
             value={form.name}
             onChange={onChange}
             required
           />
+          <label htmlFor="contact-email" className="sr-only">{t('contact.emailPlaceholder')}</label>
           <input
-            className="w-full border border-mono-200 rounded-sm p-3 bg-mono-50 text-mono-900 placeholder-mono-400 focus:outline-none focus:border-mono-500"
+            id="contact-email"
+            className="w-full border border-mono-200 rounded-sm p-3 bg-mono-50 text-mono-900 placeholder-mono-600 focus:outline-none focus:border-mono-500"
             name="email"
             type="email"
             placeholder={t('contact.emailPlaceholder')}
@@ -86,8 +90,10 @@ const Contact = () => {
             onChange={onChange}
             required
           />
+          <label htmlFor="contact-message" className="sr-only">{t('contact.messagePlaceholder')}</label>
           <textarea
-            className="w-full border border-mono-200 rounded-sm p-3 min-h-[140px] bg-mono-50 text-mono-900 placeholder-mono-400 focus:outline-none focus:border-mono-500"
+            id="contact-message"
+            className="w-full border border-mono-200 rounded-sm p-3 min-h-[140px] bg-mono-50 text-mono-900 placeholder-mono-600 focus:outline-none focus:border-mono-500"
             name="content"
             placeholder={t('contact.messagePlaceholder')}
             value={form.content}
@@ -105,6 +111,8 @@ const Contact = () => {
 
           {status.state !== 'idle' && (
             <div
+              role="status"
+              aria-live="polite"
               className={`p-3 rounded-sm text-center text-sm ${
                 status.state === 'success'
                   ? 'bg-mono-200/50 text-mono-800 border border-mono-300'

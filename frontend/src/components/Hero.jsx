@@ -9,6 +9,10 @@ const Hero = () => {
       <img
         src="/images/menu/joje.png"
         alt=""
+        width={1920}
+        height={1080}
+        fetchpriority="high"
+        decoding="async"
         className="absolute inset-0 w-full h-full object-cover scale-105 blur-[1px] select-none pointer-events-none"
         aria-hidden
       />
@@ -37,7 +41,7 @@ const Hero = () => {
         {/* Unmissable CTAs – primary vs secondary hierarchy */}
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 justify-center items-center animate-slide-up animation-delay-200">
           <button
-            onClick={() => (window.location.hash = 'menu')}
+            onClick={() => (window.location.hash = 'order')}
             className="cta-primary w-full sm:w-auto bg-mono-100 text-mono-900 px-10 py-4 text-lg font-semibold rounded-sm hover:bg-white transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
           >
             {t('hero.orderNow')}
@@ -47,6 +51,15 @@ const Hero = () => {
             className="cta-secondary w-full sm:w-auto border-2 border-mono-200 text-mono-100 px-10 py-4 text-lg font-semibold rounded-sm hover:border-white hover:text-white hover:bg-white/10 transition-all duration-200"
           >
             {t('hero.bookTable')}
+          </button>
+          <button
+            onClick={() => {
+              window.location.hash = 'menu';
+              setTimeout(() => document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth' }), 0);
+            }}
+            className="cta-secondary w-full sm:w-auto border-2 border-mono-300/60 text-mono-200 px-10 py-4 text-lg font-semibold rounded-sm hover:border-white hover:text-white hover:bg-white/10 transition-all duration-200"
+          >
+            {t('hero.viewMenu')}
           </button>
         </div>
 

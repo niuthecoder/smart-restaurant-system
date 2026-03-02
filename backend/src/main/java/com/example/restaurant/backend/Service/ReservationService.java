@@ -73,6 +73,15 @@ public class ReservationService {
         if (reservation.getTableId() == null || reservation.getReservationTime() == null) {
             throw new IllegalArgumentException("tableId and reservationTime are required");
         }
+        if (reservation.getGuestName() == null || reservation.getGuestName().isBlank()) {
+            throw new IllegalArgumentException("Guest name is required");
+        }
+        if (reservation.getGuestPhone() == null || reservation.getGuestPhone().isBlank()) {
+            throw new IllegalArgumentException("Guest phone is required");
+        }
+        if (reservation.getGuestCount() < 1 || reservation.getGuestCount() > 20) {
+            throw new IllegalArgumentException("Guest count must be between 1 and 20");
+        }
 
         LocalDateTime newStart = reservation.getReservationTime();
         LocalDateTime newEnd = newStart.plusMinutes(RESERVATION_DURATION_MINUTES);

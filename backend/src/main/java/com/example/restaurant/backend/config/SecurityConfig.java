@@ -71,7 +71,9 @@ public class SecurityConfig {
                         // QR table URL (public)
                         .requestMatchers(HttpMethod.GET, "/api/qr/table/**").permitAll()
                         // Public
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
+                        .requestMatchers("/api/auth/register", "/api/auth/create-waiter").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/auth/validate").permitAll()
                         .requestMatchers("/api/messages").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/menuitems", "/api/menuitems/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/tables", "/api/tables/**").permitAll()
@@ -81,6 +83,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/reservations/by-time").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reservations/*").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/reservations/*/cancel").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/reservations/*").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/availability").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/settings/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/waitlist").permitAll()
@@ -89,7 +92,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/loyalty/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/reviews").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/test-email").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/test-email").hasAuthority("ROLE_ADMIN")
 
                         // Manager: read-only dashboard, orders, reservations, exports, audit, menu export
                         .requestMatchers(HttpMethod.GET, "/api/admin/dashboard/stats", "/api/admin/orders", "/api/admin/orders/export", "/api/admin/reservations/export", "/api/admin/audit-log", "/api/admin/menu/export").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")
@@ -122,12 +125,12 @@ public class SecurityConfig {
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toList());
         if (origins.isEmpty()) {
-            configuration.setAllowedOriginPatterns(List.of("*"));
+            configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));
         } else {
             configuration.setAllowedOrigins(origins);
         }
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Requested-With", "X-API-Key"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

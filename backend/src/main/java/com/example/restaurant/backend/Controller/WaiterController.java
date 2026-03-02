@@ -11,6 +11,8 @@ import com.example.restaurant.backend.Repository.RestaurantOrderRepository;
 import com.example.restaurant.backend.Repository.RestaurantTableRepository;
 import com.example.restaurant.backend.config.TenantContext;
 import com.example.restaurant.backend.Service.OrderNotificationService;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+@Tag(name = "Waiter", description = "Waiter & kitchen order management")
 @RestController
 @RequestMapping("/api/waiter")
 public class WaiterController {
@@ -68,7 +71,7 @@ public class WaiterController {
     }
 
     @PostMapping("/orders")
-    public ResponseEntity<?> createOrder(@RequestBody CreateOrderRequest req) {
+    public ResponseEntity<?> createOrder(@Valid @RequestBody CreateOrderRequest req) {
         if (req.getTableId() == null)
             return ResponseEntity.badRequest().body("tableId is required");
         if (req.getItems() == null || req.getItems().isEmpty())

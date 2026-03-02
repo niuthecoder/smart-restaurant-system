@@ -1,14 +1,15 @@
 package com.example.restaurant.backend.Controller;
 
 import com.example.restaurant.backend.Service.LoyaltyService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@Tag(name = "Loyalty", description = "Customer loyalty points")
 @RestController
 @RequestMapping("/api/loyalty")
-@CrossOrigin(origins = "*")
 public class LoyaltyController {
 
     private final LoyaltyService loyaltyService;
