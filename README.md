@@ -3,7 +3,12 @@
 **Full-stack restaurant management platform** with customer ordering, table reservations, waitlist, admin and waiter dashboards, payments, and multi-language support. Built as a portfolio project (2025–2026).
 
 ---
+## Demo
+-link:- https://smart-restaurant-system-cyan.vercel.app/
+<img width="1901" height="866" alt="image" src="https://github.com/user-attachments/assets/0556f2d0-9cd6-4412-b1f1-b5eb7acff4f3" />
 
+
+---
 ## Highlights 
 
 - **Full-stack:** React 19 + Vite 7 frontend, Spring Boot 3 REST API, PostgreSQL
